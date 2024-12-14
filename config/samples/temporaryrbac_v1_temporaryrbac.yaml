@@ -1,0 +1,13 @@
+apiVersion: rbac.k8s.io/v1
+kind: TemporaryRBAC
+metadata:
+  name: example-temporary-rbac
+  namespace: default
+spec:
+  subject:
+    kind: User
+    name: developer@example.com
+  roleRef:
+    kind: Role
+    name: debug-role
+  duration: 1h
