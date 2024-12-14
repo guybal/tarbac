@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#go mod init https://github.com/guybal/tarbac
+#go mod init github.com/guybal/tarbac
 
 
 go mod tidy            # Ensure dependencies are up to date
