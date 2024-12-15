@@ -4,8 +4,9 @@ import (
 	"flag"
 	"os"
 
-	"github.com/guybal/tarbac/api/v1" // Update with your module path
-	"github.com/guybal/tarbac/controllers"
+	tarbacv1 "github.com/guybal/tarbac/api/v1" // Adjust to match your actual module path
+	controllers "github.com/guybal/tarbac/controllers"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -15,18 +16,21 @@ import (
 func main() {
 	var enableLeaderElection bool
 
-	// Define flags for the manager
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false, "Enable leader election for controller manager.")
 	flag.Parse()
 
-	// Set up the logger
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
 
-	// Initialize a new scheme
+	// Create a runtime scheme
 	scheme := runtime.NewScheme()
-	utilruntime.Must(v1.AddToScheme(scheme))
 
-	// Create the manager
+	// Register the tarbac.io/v1 API group
+	utilruntime.Must(tarbacv1.AddToScheme(scheme))
+
+	// Register the rbac.authorization.k8s.io/v1 API group
+	utilruntime.Must(rbacv1.AddToScheme(scheme))
+
+	// Create and start the manager
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:           scheme,
 		LeaderElection:   enableLeaderElection,
@@ -37,8 +41,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Set up the controller
-	if err := (&controllers.TemporaryRBACReconciler{
+	// Set up the reconciler
+	if err = (&controllers.TemporaryRBACReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
@@ -46,7 +50,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Start the manager
 	ctrl.Log.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		ctrl.Log.Error(err, "problem running manager")

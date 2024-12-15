@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: temporary-rbac-controller
-  namespace: kube-system
+  namespace: temporary-rbac-controller
 spec:
   replicas: 1
   selector:
@@ -13,13 +13,21 @@ spec:
       labels:
         app: temporary-rbac-controller
     spec:
+      imagePullSecrets:
+        - name: dockerhub-creds
+      serviceAccountName: temporary-rbac-controller-sa
       containers:
-        - name: manager
-          image: docker.io/GuyBalmas/temporary-rbac-controller:latest
+        - name: controller
+          image: docker.io/guybalmas/temporary-rbac-controller:v1.0.13
+          imagePullPolicy: IfNotPresent
+          command:
+            - /manager
+          args:
+            - "--enable-leader-election=false"
           resources:
-            requests:
-              memory: "64Mi"
-              cpu: "50m"
             limits:
-              memory: "128Mi"
-              cpu: "100m"
+              memory: 64Mi
+              cpu: 50m
+            requests:
+              memory: 32Mi
+              cpu: 20m
