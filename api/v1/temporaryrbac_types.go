@@ -13,6 +13,7 @@ type TemporaryRBACSpec struct {
 }
 
 type ChildResource struct {
+    APIVersion string `json:"apiVersion,omitempty"` // Add this field
 	Name      string `json:"name"`
 	Namespace string `json:"namespace"`
 	Kind      string `json:"kind"`
@@ -21,7 +22,9 @@ type ChildResource struct {
 // TemporaryRBACStatus defines the observed state of TemporaryRBAC
 type TemporaryRBACStatus struct {
 	State     string      `json:"state,omitempty"`
-	ExpiresAt *metav1.Time `json:"expiresAt,omitempty"` // Ensure this is a pointer
+	ExpiresAt *metav1.Time `json:"expiresAt,omitempty"`
+    CreatedAt *metav1.Time `json:"createdAt,omitempty"`
+//     TimeToLive       string      `json:"timeToLive,omitempty"`
 	ChildResource *ChildResource      `json:"childResource,omitempty"`
 }
 

@@ -35,6 +35,8 @@ func main() {
 		Scheme:           scheme,
 		LeaderElection:   enableLeaderElection,
 		LeaderElectionID: "temporary-rbac-controller",
+//         MetricsBindAddress: ":8081", // Change to a different port if needed
+//         Port:               9443,   // For webhook server
 	})
 	if err != nil {
 		ctrl.Log.Error(err, "unable to start manager")

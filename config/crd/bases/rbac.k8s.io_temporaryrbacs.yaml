@@ -21,49 +21,93 @@ spec:
             spec:
               type: object
               properties:
-                subject:
-                  type: object
-                  properties:
-                    kind:
-                      type: string
-                      enum: ["ServiceAccount", "User", "Group"]
-                      description: "The kind of subject. Use 'ServiceAccount', 'User', or 'Group'."
-                    name:
-                      type: string
-                      description: "The name of the subject."
-                    namespace:
-                      type: string
-                      description: "Namespace is required only for ServiceAccount subjects. It should be omitted for User or Group."
+                duration:
+                  type: string
+                  description: The duration for which the RBAC binding is valid.
                 roleRef:
                   type: object
                   properties:
                     kind:
                       type: string
-                      enum: ["ClusterRole", "Role"]
-                      description: "The kind of role being referenced. Use 'ClusterRole' or 'Role'."
+                      enum:
+                        - ClusterRole
+                        - Role
+                      description: The kind of role being referenced (e.g., ClusterRole, Role).
                     name:
                       type: string
-                      description: "The name of the role being referenced."
+                      description: The name of the role being referenced.
                   required:
                     - kind
                     - name
-                duration:
+                subject:
+                  type: object
+                  properties:
+                    kind:
+                      type: string
+                      enum:
+                        - ServiceAccount
+                        - User
+                        - Group
+                      description: The kind of subject (e.g., ServiceAccount, User, Group).
+                    name:
+                      type: string
+                      description: The name of the subject.
+                    namespace:
+                      type: string
+                      description: The namespace of the subject (only required for ServiceAccounts).
+              required:
+                - duration
+                - roleRef
+                - subject
+            status:
+              type: object
+              properties:
+                state:
                   type: string
-                  description: "The duration for which the RBAC binding is valid."
-          status:
-            type: object
-            properties:
-              state:
-                type: string
-                enum:
-                  - Created
-                  - Expired
-              childResource:
-                type: object
-                properties:
-                  apiVersion:
-                    type: string
-                  kind:
-                    type: string
-                  name:
-                    type: string
+                  description: The current state of the TemporaryRBAC resource (e.g., Created, Expired).
+                childResource:
+                  type: object
+                  properties:
+                    kind:
+                      type: string
+                      description: The kind of the associated child resource.
+                    name:
+                      type: string
+                      description: The name of the associated child resource.
+                    namespace:
+                      type: string
+                      description: The namespace of the associated child resource.
+                createdAt:
+                  type: string
+                  format: date-time
+                  description: The timestamp when the TemporaryRBAC was created.
+                expiresAt:
+                  type: string
+                  format: date-time
+                  description: The timestamp when the TemporaryRBAC will expire.
+#                timeToLive:
+#                  type: string
+#                  description: The remaining time until expiration, as a human-readable string.
+      additionalPrinterColumns:
+        - name: State
+          type: string
+          description: The current state of the TemporaryRBAC resource.
+          jsonPath: .status.state
+        - name: Child Resource
+          type: string
+          description: Kind and Name of the child resource
+          jsonPath: .status.childResource.kind
+        - name: Resource Name
+          type: string
+          description: Name of the child resource
+          jsonPath: .status.childResource.name
+        - name: Created At
+          type: string #date
+          description: The creation timestamp of the TemporaryRBAC.
+          jsonPath: .status.createdAt
+        - name: Expires At
+          type: string #date
+          description: The expiration timestamp of the TemporaryRBAC.
+          jsonPath: .status.expiresAt
+      subresources:
+        status: {}
