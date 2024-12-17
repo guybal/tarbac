@@ -14,6 +14,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 type TemporaryRBACReconciler struct {
@@ -116,7 +117,6 @@ func (r *TemporaryRBACReconciler) ensureBindings(ctx context.Context, tempRBAC *
 		tempRBAC.Status.CreatedAt = &metav1.Time{Time: time.Now()}
 	}
 
-// 	var lastChildResource *tarbacv1.ChildResource
 	var child_resources = []tarbacv1.ChildResource{}
 
 	// Iterate over all subjects and create corresponding bindings
@@ -161,6 +161,12 @@ func (r *TemporaryRBACReconciler) ensureBindings(ctx context.Context, tempRBAC *
         } else {
 			return fmt.Errorf("unsupported roleRef.kind: %s", tempRBAC.Spec.RoleRef.Kind)
 		}
+
+        // Set the OwnerReference on the RoleBinding
+        if err := controllerutil.SetControllerReference(tempRBAC, binding, r.Scheme); err != nil {
+            logger.Error(err, "Failed to set OwnerReference for RoleBinding", "RoleBinding", binding)
+            return err
+        }
 
 		// Attempt to create the binding
 		if err := r.Client.Create(ctx, binding); err != nil && !apierrors.IsAlreadyExists(err) {
