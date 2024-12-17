@@ -18,7 +18,7 @@ spec:
       serviceAccountName: temporary-rbac-controller-sa
       containers:
         - name: controller
-          image: docker.io/guybalmas/temporary-rbac-controller:v1.0.54
+          image: docker.io/guybalmas/temporary-rbac-controller:v1.0.55
           imagePullPolicy: IfNotPresent
           command:
             - /manager
