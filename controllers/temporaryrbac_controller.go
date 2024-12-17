@@ -57,6 +57,11 @@ func (r *TemporaryRBACReconciler) Reconcile(ctx context.Context, req ctrl.Reques
     if tempRBAC.Status.ExpiresAt == nil {
         expiration := tempRBAC.Status.CreatedAt.Time.Add(duration)
         tempRBAC.Status.ExpiresAt = &metav1.Time{Time: expiration}
+        // Commit the status update to the API server
+        if err := r.Status().Update(ctx, &tempRBAC); err != nil {
+            logger.Error(err, "Failed to update TemporaryRBAC status with expiration date")
+            return ctrl.Result{}, err
+        }
     }
 
     // Check expiration status
