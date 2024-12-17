@@ -8,11 +8,9 @@ K8S_MANIFESTS = [
     './config/manager/manager.yaml',
     './config/manager/rbac.yaml',
     './config/manager/sa.yaml',
-    './config/samples/temporaryrbac_v1_temporaryrbac.yaml',
     './config/samples/test-cluster-role.yaml',
+    './config/samples/test-role.yaml',
 ]
-
-compile_cmd=' && '
 
 local_resource(
   'compile',
@@ -29,7 +27,7 @@ docker_build_with_restart(
     entrypoint=['/manager'],
     only=['./bin','./api','./config','./controllers', './go.mod', './go.sum', './main.go'],
     live_update=[
-        sync('.', '/workspace'),  # Sync local changes to the container
+        sync('./bin/manager', '/workspace'),  # Sync local changes to the container
     ],
     restart_file='/tmp/.restart-proc',
 )

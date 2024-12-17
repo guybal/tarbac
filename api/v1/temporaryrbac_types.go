@@ -8,9 +8,9 @@ import (
 
 // TemporaryRBACSpec defines the desired state of TemporaryRBAC
 type TemporaryRBACSpec struct {
-	Subject  rbacv1.Subject       `json:"subject"`            // Primary subject
-	Subjects []rbacv1.Subject     `json:"subjects,omitempty"` // Additional subjects
-	RoleRef  RoleRefWithNamespace `json:"roleRef"`            // Role or ClusterRole reference
+// 	Subject  rbacv1.Subject       `json:"subject"`            // Primary subject
+	Subjects []rbacv1.Subject     `json:"subjects,omitempty"` // Subjects
+	RoleRef  rbacv1.RoleRef       `json:"roleRef"`            // Role or ClusterRole reference
 	Duration string               `json:"duration"`           // Duration for the TemporaryRBAC
 }
 
@@ -27,7 +27,7 @@ type TemporaryRBACStatus struct {
 	State         string         `json:"state,omitempty"`         // State of the TemporaryRBAC
 	ExpiresAt     *metav1.Time   `json:"expiresAt,omitempty"`     // Expiration time
 	CreatedAt     *metav1.Time   `json:"createdAt,omitempty"`     // Creation time
-	ChildResource *ChildResource `json:"childResource,omitempty"` // Details of the associated resource
+	ChildResource []ChildResource `json:"childResource,omitempty"` // Details of the associated resource
 }
 
 // +kubebuilder:object:root=true
@@ -78,20 +78,26 @@ func (in *TemporaryRBACSpec) DeepCopy() *TemporaryRBACSpec {
 }
 
 // DeepCopyInto manually implements the deepcopy function for TemporaryRBACStatus.
+// DeepCopyInto manually implements the deepcopy function for TemporaryRBACStatus.
 func (in *TemporaryRBACStatus) DeepCopyInto(out *TemporaryRBACStatus) {
 	*out = *in
+
 	if in.ExpiresAt != nil {
 		in, out := &in.ExpiresAt, &out.ExpiresAt
 		*out = (*in).DeepCopy()
 	}
+
 	if in.CreatedAt != nil {
 		in, out := &in.CreatedAt, &out.CreatedAt
 		*out = (*in).DeepCopy()
 	}
+
 	if in.ChildResource != nil {
 		in, out := &in.ChildResource, &out.ChildResource
-		*out = new(ChildResource)
-		**out = **in
+		*out = make([]ChildResource, len(*in)) // Allocate new slice
+		for i := range *in {
+			(*out)[i] = (*in)[i] // DeepCopy each element in the slice
+		}
 	}
 }
 

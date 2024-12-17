@@ -27,16 +27,19 @@ spec:
                 roleRef:
                   type: object
                   properties:
+                    apiVersion:
+                      type: string
+                      description: The apiVersion of role being referenced.
                     kind:
                       type: string
                       enum:
-                        - ClusterRole
+                        - ClusterRole                                                                 # REMOVE
                         - Role
                       description: The kind of role being referenced (e.g., ClusterRole, Role).
                     name:
                       type: string
                       description: The name of the role being referenced.
-                    namespace:
+                    namespace:                                                                        # REMOVE
                       type: string
                       nullable: true
                       description: The namespace to create the binding (if not cluster scoped).
@@ -44,7 +47,7 @@ spec:
                     - kind
                     - name
                 subjects:
-                  nullable: true
+#                  nullable: true
                   type: array
                   items:
                     type: object
@@ -58,28 +61,29 @@ spec:
                       name:
                         type: string
                       namespace:
+                        nullable: true
                         type: string
-                subject:
-                  nullable: true
-                  type: object
-                  properties:
-                    kind:
-                      type: string
-                      enum:
-                        - ServiceAccount
-                        - User
-                        - Group
-                      description: The kind of subject (e.g., ServiceAccount, User, Group).
-                    name:
-                      type: string
-                      description: The name of the subject.
-                    namespace:
-                      type: string
-                      description: The namespace of the subject (only required for ServiceAccounts).
+#                subject:
+#                  nullable: true
+#                  type: object
+#                  properties:
+#                    kind:
+#                      type: string
+#                      enum:
+#                        - ServiceAccount
+#                        - User
+#                        - Group
+#                      description: The kind of subject (e.g., ServiceAccount, User, Group).
+#                    name:
+#                      type: string
+#                      description: The name of the subject.
+#                    namespace:
+#                      type: string
+#                      description: The namespace of the subject (only required for ServiceAccounts).
               required:
                 - duration
                 - roleRef
-                - subject
+                - subjects
             status:
               type: object
               properties:
@@ -87,17 +91,32 @@ spec:
                   type: string
                   description: The current state of the TemporaryRBAC resource (e.g., Created, Expired).
                 childResource:
-                  type: object
-                  properties:
-                    kind:
-                      type: string
-                      description: The kind of the associated child resource.
-                    name:
-                      type: string
-                      description: The name of the associated child resource.
-                    namespace:
-                      type: string
-                      description: The namespace of the associated child resource.
+                  type: array
+                  description: The list of associated child resources.
+                  items:
+                    type: object
+                    properties:
+                      kind:
+                        type: string
+                        description: The kind of the associated child resource.
+                      name:
+                        type: string
+                        description: The name of the associated child resource.
+                      namespace:
+                        type: string
+                        description: The namespace of the associated child resource.
+#                childResource:
+#                  type: object
+#                  properties:
+#                    kind:
+#                      type: string
+#                      description: The kind of the associated child resource.
+#                    name:
+#                      type: string
+#                      description: The name of the associated child resource.
+#                    namespace:
+#                      type: string
+#                      description: The namespace of the associated child resource.
                 createdAt:
                   type: string
                   format: date-time
@@ -117,11 +136,11 @@ spec:
         - name: Child Resource
           type: string
           description: Kind and Name of the child resource
-          jsonPath: .status.childResource.kind
+          jsonPath: .status.childResource[*].kind
         - name: Resource Name
           type: string
           description: Name of the child resource
-          jsonPath: .status.childResource.name
+          jsonPath: .status.childResource[*].name
 #        - name: Resource Namespace
 #          type: string
 #          description: The current namespace of the child resource.
