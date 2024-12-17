@@ -1,0 +1,14 @@
+apiVersion: tarbac.io/v1
+kind: TemporaryRBAC
+metadata:
+  name: example-multiple-subjects-temporary-rbac
+  namespace: default
+spec:
+  subjects:
+    - kind: ServiceAccount
+      name: default
+      namespace: default
+  roleRef:
+    kind: ClusterRole
+    name: test-cluster-role
+  duration: 1m
