@@ -1,23 +1,23 @@
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: temporary-rbac-controller-role
-rules:
-  - apiGroups: ["tarbac.io"]
-    resources: ["temporaryrbacs"]
-    verbs: ["get", "list", "watch", "create", "update", "delete"]
-  - apiGroups: ["tarbac.io"]
-    resources: ["temporaryrbacs/status"]
-    verbs: ["get", "update", "patch"]
-  - apiGroups: ["rbac.authorization.k8s.io"]
-    resources: ["clusterrolebindings", "rolebindings"]
-    verbs: ["get", "list", "watch", "create", "update", "delete"]
-#  - apiGroups: [""]
-#    resources: ["configmaps", "pods", "events", "bindings", "namespaces", "persistentvolumeclaims", "serviceaccounts", "services"]
-#    verbs: ["get", "list", "watch"]
-  - apiGroups: ["rbac.authorization.k8s.io"]
-    resources: ["clusterroles", "roles"]
-    verbs: ["get", "list", "watch", "bind"]
+#apiVersion: rbac.authorization.k8s.io/v1
+#kind: ClusterRole
+#metadata:
+#  name: temporary-rbac-controller-role
+#rules:
+#  - apiGroups: ["tarbac.io"]
+#    resources: ["temporaryrbacs"]
+#    verbs: ["get", "list", "watch", "create", "update", "delete"]
+#  - apiGroups: ["tarbac.io"]
+#    resources: ["temporaryrbacs/status"]
+#    verbs: ["get", "update", "patch"]
+#  - apiGroups: ["rbac.authorization.k8s.io"]
+#    resources: ["clusterrolebindings", "rolebindings"]
+#    verbs: ["get", "list", "watch", "create", "update", "delete"]
+##  - apiGroups: [""]
+##    resources: ["configmaps", "pods", "events", "bindings", "namespaces", "persistentvolumeclaims", "serviceaccounts", "services"]
+##    verbs: ["get", "list", "watch"]
+#  - apiGroups: ["rbac.authorization.k8s.io"]
+#    resources: ["clusterroles", "roles"]
+#    verbs: ["get", "list", "watch", "bind"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -30,4 +30,4 @@ subjects:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: temporary-rbac-controller-role
+  name: cluster-admin #temporary-rbac-controller-role

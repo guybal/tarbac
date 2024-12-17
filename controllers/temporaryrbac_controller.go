@@ -99,9 +99,9 @@ func (r *TemporaryRBACReconciler) ensureBindings(ctx context.Context, tempRBAC *
 
 	// Collect subjects from both `spec.subject` and `spec.subjects`
 	var subjects []rbacv1.Subject
-	if tempRBAC.Spec.Subject != (rbacv1.Subject{}) {
-		subjects = append(subjects, tempRBAC.Spec.Subject)
-	}
+    // 	if tempRBAC.Spec.Subject != (rbacv1.Subject{}) {
+    // 		subjects = append(subjects, tempRBAC.Spec.Subject)
+    // 	}
 	if len(tempRBAC.Spec.Subjects) > 0 {
 		subjects = append(subjects, tempRBAC.Spec.Subjects...)
 	}
@@ -116,7 +116,8 @@ func (r *TemporaryRBACReconciler) ensureBindings(ctx context.Context, tempRBAC *
 		tempRBAC.Status.CreatedAt = &metav1.Time{Time: time.Now()}
 	}
 
-	var lastChildResource *tarbacv1.ChildResource
+// 	var lastChildResource *tarbacv1.ChildResource
+	var child_resources = []tarbacv1.ChildResource{}
 
 	// Iterate over all subjects and create corresponding bindings
 	for _, subject := range subjects {
@@ -130,11 +131,11 @@ func (r *TemporaryRBACReconciler) ensureBindings(ctx context.Context, tempRBAC *
         }
 
 		// Generate the binding based on the RoleRef kind
-		if tempRBAC.Spec.RoleRef.Kind == "ClusterRole" && tempRBAC.Spec.RoleRef.Namespace != "" {
+		if tempRBAC.Spec.RoleRef.Kind == "ClusterRole" {
 			binding = &rbacv1.RoleBinding{
                 ObjectMeta: metav1.ObjectMeta{
                     Name:      generateBindingName(subject, roleRef),
-                    Namespace: tempRBAC.Spec.RoleRef.Namespace,
+                    Namespace: tempRBAC.ObjectMeta.Namespace,
                     Labels: map[string]string{
                         "tarbac.io/owner": tempRBAC.Name,
                     },
@@ -144,23 +145,11 @@ func (r *TemporaryRBACReconciler) ensureBindings(ctx context.Context, tempRBAC *
             }
 //             bindingKind = "RoleBinding"
             binding.GetObjectKind().SetGroupVersionKind(rbacv1.SchemeGroupVersion.WithKind("RoleBinding"))
-		} else if tempRBAC.Spec.RoleRef.Kind == "ClusterRole" {
-			binding = &rbacv1.ClusterRoleBinding{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: generateBindingName(subject, roleRef),
-					Labels: map[string]string{
-						"tarbac.io/owner": tempRBAC.Name,
-					},
-				},
-				Subjects: []rbacv1.Subject{subject},
-				RoleRef:  roleRef,
-			}
-			binding.GetObjectKind().SetGroupVersionKind(rbacv1.SchemeGroupVersion.WithKind("ClusterRoleBinding"))
-		} else if tempRBAC.Spec.RoleRef.Kind == "Role" {
+ 		} else if tempRBAC.Spec.RoleRef.Kind == "Role" {
             binding = &rbacv1.RoleBinding{
                 ObjectMeta: metav1.ObjectMeta{
                     Name:      generateBindingName(subject, roleRef),
-                    Namespace: tempRBAC.Spec.RoleRef.Namespace,
+                    Namespace: tempRBAC.ObjectMeta.Namespace,
                     Labels: map[string]string{
                         "tarbac.io/owner": tempRBAC.Name,
                     },
@@ -180,16 +169,22 @@ func (r *TemporaryRBACReconciler) ensureBindings(ctx context.Context, tempRBAC *
 		}
 
 		// Record the last binding for status update
-		lastChildResource = &tarbacv1.ChildResource{
-			APIVersion: binding.GetObjectKind().GroupVersionKind().GroupVersion().String(),
-			Kind:       binding.GetObjectKind().GroupVersionKind().Kind,
-			Name:       binding.GetName(),
-			Namespace:  tempRBAC.Spec.RoleRef.Namespace,
-		}
+// 		lastChildResource = &tarbacv1.ChildResource{
+// 			APIVersion: binding.GetObjectKind().GroupVersionKind().GroupVersion().String(),
+// 			Kind:       binding.GetObjectKind().GroupVersionKind().Kind,
+// 			Name:       binding.GetName(),
+// 			Namespace:  binding.GetNamespace(),
+// 		}
+        child_resources = append(child_resources, tarbacv1.ChildResource{
+            APIVersion: binding.GetObjectKind().GroupVersionKind().GroupVersion().String(),
+            Kind:       binding.GetObjectKind().GroupVersionKind().Kind,
+            Name:       binding.GetName(),
+            Namespace:  binding.GetNamespace(),
+        })
 	}
 
 	// Update the status with the last created child resource
-	tempRBAC.Status.ChildResource = lastChildResource
+	tempRBAC.Status.ChildResource = child_resources// lastChildResource
 	tempRBAC.Status.State = "Created"
 
 	// Commit the status update to the API server
@@ -205,57 +200,60 @@ func (r *TemporaryRBACReconciler) ensureBindings(ctx context.Context, tempRBAC *
 // cleanupBindings deletes the RoleBinding or ClusterRoleBinding associated with the TemporaryRBAC resource
 func (r *TemporaryRBACReconciler) cleanupBindings(ctx context.Context, tempRBAC *tarbacv1.TemporaryRBAC) error {
     logger := log.FromContext(ctx)
+    var remainingChildResources []tarbacv1.ChildResource
 
-    if tempRBAC.Status.ChildResource != nil {
+    if len(tempRBAC.Status.ChildResource) > 0 {
+        for _, child := range tempRBAC.Status.ChildResource {
+            logger.Info("Cleaning up child resource", "kind", child.Kind, "name", child.Name, "namespace", child.Namespace)
 
-        logger.Info("Cleaning up child resource", "kind", tempRBAC.Status.ChildResource.Kind, "name", tempRBAC.Status.ChildResource.Name, "namespace", tempRBAC.Status.ChildResource.Namespace)
+            switch child.Kind {
+            case "RoleBinding":
+                // Ensure namespace is not empty
+                if child.Namespace == "" {
+                    return fmt.Errorf("namespace is empty for RoleBinding: %s", child.Name)
+                }
 
-        switch tempRBAC.Status.ChildResource.Kind {
-        case "ClusterRoleBinding":
-            // Delete ClusterRoleBinding
-            err := r.Client.Delete(ctx, &rbacv1.ClusterRoleBinding{
-                ObjectMeta: metav1.ObjectMeta{Name: tempRBAC.Status.ChildResource.Name},
-            })
-            if err != nil && !apierrors.IsNotFound(err) {
-                logger.Error(err, "Failed to delete ClusterRoleBinding", "name", tempRBAC.Status.ChildResource.Name)
-                return err
+                // Delete RoleBinding
+                err := r.Client.Delete(ctx, &rbacv1.RoleBinding{
+                    ObjectMeta: metav1.ObjectMeta{
+                        Name:      child.Name,
+                        Namespace: child.Namespace,
+                    },
+                })
+                if err != nil && !apierrors.IsNotFound(err) {
+                    logger.Error(err, "Failed to delete RoleBinding", "name", child.Name, "namespace", child.Namespace)
+                    // Keep the resource in the list if deletion fails
+                    remainingChildResources = append(remainingChildResources, child)
+                    continue
+                }
+                logger.Info("Successfully deleted RoleBinding", "name", child.Name, "namespace", child.Namespace)
+
+            default:
+                logger.Error(fmt.Errorf("unsupported child resource kind"), "Unsupported child resource kind", "kind", child.Kind)
+                remainingChildResources = append(remainingChildResources, child)
             }
-            logger.Info("Successfully deleted ClusterRoleBinding", "name", tempRBAC.Status.ChildResource.Name)
-
-        case "RoleBinding":
-            // Ensure namespace is not empty
-            if tempRBAC.Status.ChildResource.Namespace == "" {
-                return fmt.Errorf("namespace is empty for RoleBinding: %s", tempRBAC.Status.ChildResource.Name)
-            }
-            // Delete RoleBinding
-            err := r.Client.Delete(ctx, &rbacv1.RoleBinding{
-                ObjectMeta: metav1.ObjectMeta{
-                    Name:      tempRBAC.Status.ChildResource.Name,
-                    Namespace: tempRBAC.Status.ChildResource.Namespace,
-                },
-            })
-            if err != nil && !apierrors.IsNotFound(err) {
-                logger.Error(err, "Failed to delete RoleBinding", "name", tempRBAC.Status.ChildResource.Name, "namespace", tempRBAC.Status.ChildResource.Namespace)
-                return err
-            }
-            logger.Info("Successfully deleted RoleBinding", "name", tempRBAC.Status.ChildResource.Name, "namespace", tempRBAC.Status.ChildResource.Namespace)
-
-        default:
-            logger.Error(fmt.Errorf("unsupported child resource kind"), "Unsupported child resource kind", "kind", tempRBAC.Status.ChildResource.Kind)
-            return fmt.Errorf("unsupported child resource kind: %s", tempRBAC.Status.ChildResource.Kind)
         }
     }
 
-    // Reset TemporaryRBAC status
-    tempRBAC.Status.ChildResource = nil
-    tempRBAC.Status.State = "Expired"
+    // Update the ChildResource slice after cleanup
+    if len(remainingChildResources) == 0 {
+        tempRBAC.Status.ChildResource = nil // Reset if all resources are deleted
+    } else {
+        tempRBAC.Status.ChildResource = remainingChildResources // Retain resources that couldn't be deleted
+    }
+
+    // Update the state if no child resources remain
+    if tempRBAC.Status.ChildResource == nil {
+        tempRBAC.Status.State = "Expired"
+    }
 
     // Update status in Kubernetes
     if err := r.Status().Update(ctx, tempRBAC); err != nil {
-        logger.Error(err, "Failed to update TemporaryRBAC status to Expired")
+        logger.Error(err, "Failed to update TemporaryRBAC status")
         return err
     }
-    logger.Info("TemporaryRBAC status updated to Expired", "name", tempRBAC.Name)
+
+    logger.Info("TemporaryRBAC status updated", "name", tempRBAC.Name, "state", tempRBAC.Status.State)
     return nil
 }
 
