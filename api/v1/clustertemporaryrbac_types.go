@@ -3,7 +3,7 @@ package v1
 import (
 // 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-// 	runtime "k8s.io/apimachinery/pkg/runtime"
+	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
 // +kubebuilder:object:root=true
@@ -22,19 +22,50 @@ type ClusterTemporaryRBACList struct {
 	Items           []ClusterTemporaryRBAC `json:"items"`
 }
 
+// func (in *ClusterTemporaryRBACList) DeepCopyInto(out *ClusterTemporaryRBACList) {
+// 	*out = *in
+// 	out.TypeMeta = in.TypeMeta
+// 	in.ListMeta.DeepCopyInto(&out.ListMeta)
+// 	if in.Items != nil {
+// 		in, out := &in.Items, &out.Items
+// 		*out = make([]ClusterTemporaryRBAC, len(*in))
+// 		for i := range *in {
+// 			(*in)[i].DeepCopyInto(&(*out)[i]) // ObjectMeta is handled as a struct here
+// 		}
+// 	}
+// }
+
+// DeepCopy manually implements the deepcopy function for ClusterTemporaryRBAC.
+func (in *ClusterTemporaryRBAC) DeepCopy() *ClusterTemporaryRBAC {
+	if in == nil {
+		return nil
+	}
+	out := new(ClusterTemporaryRBAC)
+	in.DeepCopyInto(out)
+	return out
+}
+
+// DeepCopyObject manually implements the deepcopy function for runtime.Object.
+func (in *ClusterTemporaryRBAC) DeepCopyObject() runtime.Object {
+	if c := in.DeepCopy(); c != nil {
+		return c
+	}
+	return nil
+}
+
+// DeepCopyInto manually implements the deepcopy function for ClusterTemporaryRBACList.
 func (in *ClusterTemporaryRBACList) DeepCopyInto(out *ClusterTemporaryRBACList) {
 	*out = *in
-	out.TypeMeta = in.TypeMeta
+	out.TypeMeta = in.TypeMeta // TypeMeta doesn't require deepcopy
 	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]ClusterTemporaryRBAC, len(*in))
 		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i]) // ObjectMeta is handled as a struct here
+			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
 }
-
 
 // type ClusterTemporaryRBACSpec struct {
 //     Subjects       []rbacv1.Subject `json:"subjects,omitempty"`
