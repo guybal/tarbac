@@ -190,7 +190,7 @@ func (r *TemporaryRBACReconciler) ensureBindings(ctx context.Context, tempRBAC *
 	}
 
 	// Update the status with the last created child resource
-	tempRBAC.Status.ChildResource = child_resources// lastChildResource
+	tempRBAC.Status.ChildResource = child_resources
 	tempRBAC.Status.State = "Created"
 
 	// Commit the status update to the API server
@@ -251,6 +251,16 @@ func (r *TemporaryRBACReconciler) cleanupBindings(ctx context.Context, tempRBAC 
     // Update the state if no child resources remain
     if tempRBAC.Status.ChildResource == nil {
         tempRBAC.Status.State = "Expired"
+    }
+
+    // Check DeletionPolicy
+    if tempRBAC.Spec.RetentionPolicy == "delete" {
+        logger.Info("RetentionPolicy is set to delete, deleting TemporaryRBAC resource", "name", tempRBAC.Name)
+        if err := r.Client.Delete(ctx, tempRBAC); err != nil {
+            logger.Error(err, "Failed to delete TemporaryRBAC resource")
+            return err
+        }
+        return nil // Exit since resource is deleted
     }
 
     // Update status in Kubernetes

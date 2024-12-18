@@ -12,6 +12,7 @@ type TemporaryRBACSpec struct {
 	Subjects []rbacv1.Subject     `json:"subjects,omitempty"` // Subjects
 	RoleRef  rbacv1.RoleRef       `json:"roleRef"`            // Role or ClusterRole reference
 	Duration string               `json:"duration"`           // Duration for the TemporaryRBAC
+    RetentionPolicy string           `json:"retentionPolicy,omitempty"` // delete or retain
 }
 
 // ChildResource represents details of the associated RoleBinding or ClusterRoleBinding

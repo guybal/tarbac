@@ -16,3 +16,4 @@ spec:
     kind: Role
     name: test-role
   duration: 1m
+  retentionPolicy: delete # retain
