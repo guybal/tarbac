@@ -8,7 +8,6 @@ import (
 
 // TemporaryRBACSpec defines the desired state of TemporaryRBAC
 type TemporaryRBACSpec struct {
-// 	Subject  rbacv1.Subject       `json:"subject"`            // Primary subject
 	Subjects []rbacv1.Subject     `json:"subjects,omitempty"` // Subjects
 	RoleRef  rbacv1.RoleRef       `json:"roleRef"`            // Role or ClusterRole reference
 	Duration string               `json:"duration"`           // Duration for the TemporaryRBAC

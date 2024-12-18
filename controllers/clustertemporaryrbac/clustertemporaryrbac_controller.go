@@ -127,10 +127,11 @@ func (r *ClusterTemporaryRBACReconciler) ensureBindings(ctx context.Context, clu
 			Subjects: []rbacv1.Subject{subject},
 			RoleRef: rbacv1.RoleRef{
 				APIGroup: clusterTempRBAC.Spec.RoleRef.APIGroup,
-				Kind:     clusterTempRBAC.Spec.RoleRef.Kind,
-				Name:     clusterTempRBAC.Spec.RoleRef.Name,
+                Kind:     clusterTempRBAC.Spec.RoleRef.Kind,
+                Name:     clusterTempRBAC.Spec.RoleRef.Name,
 			},
 		}
+//         roleBinding.GetObjectKind().SetGroupVersionKind(rbacv1.SchemeGroupVersion.WithKind("ClusterRoleBinding"))
 
 		// Set the OwnerReference on the ClusterRoleBinding
 		if err := controllerutil.SetControllerReference(clusterTempRBAC, roleBinding, r.Scheme); err != nil {
@@ -144,10 +145,16 @@ func (r *ClusterTemporaryRBACReconciler) ensureBindings(ctx context.Context, clu
 			return err
 		}
 
+// 		childResources = append(childResources, tarbacv1.ChildResource{
+// 			APIVersion: roleBinding.GetObjectKind().GroupVersionKind().GroupVersion().String(),
+// 			Kind:       roleBinding.GetObjectKind().GroupVersionKind().Kind,
+// 			Name:       roleBinding.GetName(),
+// 		})
+        // Add to childResources with proper Kind and APIVersion
 		childResources = append(childResources, tarbacv1.ChildResource{
-			APIVersion: roleBinding.APIVersion,
-			Kind:       roleBinding.Kind,
-			Name:       roleBinding.Name,
+			APIVersion: rbacv1.SchemeGroupVersion.String(), // Correctly set the APIVersion
+			Kind:       "ClusterRoleBinding",               // Correctly set the Kind
+			Name:       roleBinding.GetName(),
 		})
 
 		logger.Info("Successfully created ClusterRoleBinding with OwnerReference", "ClusterRoleBinding", roleBinding.Name)
@@ -199,9 +206,9 @@ func (r *ClusterTemporaryRBACReconciler) cleanupBindings(ctx context.Context, cl
 		clusterTempRBAC.Status.ChildResource = remainingChildResources
 	}
 
-	// Check DeletionPolicy
+	// Check RetentionPolicy
 	if clusterTempRBAC.Spec.RetentionPolicy == "delete" && clusterTempRBAC.Status.ChildResource == nil {
-		logger.Info("DeletionPolicy is set to delete, deleting ClusterTemporaryRBAC resource", "name", clusterTempRBAC.Name)
+		logger.Info("RetentionPolicy is set to delete, deleting ClusterTemporaryRBAC resource", "name", clusterTempRBAC.Name)
 		if err := r.Client.Delete(ctx, clusterTempRBAC); err != nil {
 			logger.Error(err, "Failed to delete ClusterTemporaryRBAC resource")
 			return err

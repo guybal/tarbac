@@ -5,7 +5,9 @@ import (
 	"os"
 
 	tarbacv1 "github.com/guybal/tarbac/api/v1" // Adjust to match your actual module path
-	controllers "github.com/guybal/tarbac/controllers"
+// 	controllers "github.com/guybal/tarbac/controllers"
+    temporaryrbac "github.com/guybal/tarbac/controllers/temporaryrbac"
+	clustertemporaryrbac "github.com/guybal/tarbac/controllers/clustertemporaryrbac"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -43,14 +45,23 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Set up the reconciler
-	if err = (&controllers.TemporaryRBACReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		ctrl.Log.Error(err, "unable to create controller", "controller", "TemporaryRBAC")
-		os.Exit(1)
-	}
+	// Set up the TemporaryRBAC reconciler
+	if err := (&temporaryrbac.TemporaryRBACReconciler{
+    	Client: mgr.GetClient(),
+    	Scheme: mgr.GetScheme(),
+    }).SetupWithManager(mgr); err != nil {
+    	ctrl.Log.Error(err, "unable to create controller", "controller", "TemporaryRBAC")
+    	os.Exit(1)
+    }
+
+	// Set up the ClusterTemporaryRBAC reconciler
+    if err := (&clustertemporaryrbac.ClusterTemporaryRBACReconciler{
+    	Client: mgr.GetClient(),
+    	Scheme: mgr.GetScheme(),
+    }).SetupWithManager(mgr); err != nil {
+    	ctrl.Log.Error(err, "unable to create controller", "controller", "ClusterTemporaryRBAC")
+    	os.Exit(1)
+    }
 
 	ctrl.Log.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
