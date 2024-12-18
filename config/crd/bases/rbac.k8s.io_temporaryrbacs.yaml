@@ -26,7 +26,7 @@ spec:
                   enum:
                     - delete
                     - retain
-                  description: Determines whether the TemporaryRBAC resource is deleted upon expiration.
+                  description: Determines whether the TemporaryRBAC resource is deleted upon expiration (defaults to retain).
                   default: retain
                 duration:
                   type: string
