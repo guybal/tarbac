@@ -55,7 +55,7 @@ jobs:
         run: |
           go mod tidy
           export PATH=$PATH:$(go env GOPATH)/bin # Add GOPATH/bin to PATH
-          go install sigs.k8s.io/controller-tools/cmd/controller-gen@latest
+          go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.16.5
           controller-gen crd paths=./api/v1 output:crd:artifacts:config=./config/crd/bases
 
       - name: Update Docker Image Tag in Manifest
