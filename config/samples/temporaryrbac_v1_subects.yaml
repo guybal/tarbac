@@ -15,4 +15,5 @@ spec:
     apiVersion: rbac.authorization.k8s.io/v1
     kind: Role
     name: test-role
-  duration: 1m
+  duration: 5m
+  retentionPolicy: delete
