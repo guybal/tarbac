@@ -1,18 +1,16 @@
 apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
+kind: ClusterRole
 metadata:
-  name: get-secrets-role
-  namespace: default
+  name: get-pods-cluster-role
 rules:
   - apiGroups: [""]
-    resources: ["secrets"]
+    resources: ["pods"]
     verbs: ["get", "list"]
 ---
 apiVersion: tarbac.io/v1
-kind: TemporaryRBAC
+kind: ClusterTemporaryRBAC
 metadata:
-  name: example-multiple-subjects-temporary-role
-  namespace: default
+  name: example-cluster-temporary-rbac
 spec:
   subjects:
     - kind: ServiceAccount
@@ -23,7 +21,8 @@ spec:
       namespace: default
   roleRef:
     apiVersion: rbac.authorization.k8s.io/v1
-    kind: Role
-    name: get-secrets-role
+    kind: Role #ClusterRole
+    name: get-secrets-role #get-pods-cluster-role
   duration: 1m
   retentionPolicy: delete # retain
+

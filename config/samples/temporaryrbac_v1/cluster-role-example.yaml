@@ -10,7 +10,7 @@ rules:
 apiVersion: tarbac.io/v1
 kind: TemporaryRBAC
 metadata:
-  name: example-multiple-subjects-temporary-rbac
+  name: example-multiple-subjects-namespaced-cluster-role
   namespace: default
 spec:
   subjects:

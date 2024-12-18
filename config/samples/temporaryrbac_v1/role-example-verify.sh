@@ -9,7 +9,7 @@ kubectl auth can-i get secrets -n default --as=system:serviceaccount:default:tes
 echo
 echo
 echo "View runtime YAML manifest"
-kubectl get temporaryrbacs.tarbac.io -n default -o yaml example-multiple-subjects-temporary-rbac
+kubectl get temporaryrbacs.tarbac.io -n default -o yaml example-multiple-subjects-temporary-role
 echo
 echo
 echo "View runtime chile resources"
