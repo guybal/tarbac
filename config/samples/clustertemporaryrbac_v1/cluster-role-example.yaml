@@ -21,8 +21,8 @@ spec:
       namespace: default
   roleRef:
     apiVersion: rbac.authorization.k8s.io/v1
-    kind: Role #ClusterRole
-    name: get-secrets-role #get-pods-cluster-role
+    kind: ClusterRole
+    name: get-pods-cluster-role
   duration: 1m
   retentionPolicy: delete # retain
 
