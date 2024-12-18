@@ -3,10 +3,11 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"strings"
+// 	"strings"
 	"time"
 
 	tarbacv1 "github.com/guybal/tarbac/api/v1" // Adjust to match your actual module path
+// 	utils "github.com/guybal/tarbac/utils"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -134,7 +135,7 @@ func (r *TemporaryRBACReconciler) ensureBindings(ctx context.Context, tempRBAC *
 		if tempRBAC.Spec.RoleRef.Kind == "ClusterRole" {
 			binding = &rbacv1.RoleBinding{
                 ObjectMeta: metav1.ObjectMeta{
-                    Name:      generateBindingName(subject, roleRef),
+                    Name:      generateBindingName(subject, roleRef),  // utils.GenerateBindingName
                     Namespace: tempRBAC.ObjectMeta.Namespace,
                     Labels: map[string]string{
                         "tarbac.io/owner": tempRBAC.Name,
@@ -148,7 +149,7 @@ func (r *TemporaryRBACReconciler) ensureBindings(ctx context.Context, tempRBAC *
  		} else if tempRBAC.Spec.RoleRef.Kind == "Role" {
             binding = &rbacv1.RoleBinding{
                 ObjectMeta: metav1.ObjectMeta{
-                    Name:      generateBindingName(subject, roleRef),
+                    Name:      generateBindingName(subject, roleRef), // utils.GenerateBindingName
                     Namespace: tempRBAC.ObjectMeta.Namespace,
                     Labels: map[string]string{
                         "tarbac.io/owner": tempRBAC.Name,
@@ -294,11 +295,11 @@ func (r *TemporaryRBACReconciler) updateStatusWithRetry(ctx context.Context, tem
 
 	return fmt.Errorf("status update failed after retries for TemporaryRBAC %s", tempRBAC.Name)
 }
-
-// generateBindingName generates a unique name for the binding
-func generateBindingName(subject rbacv1.Subject, roleRef rbacv1.RoleRef) string {
-	return fmt.Sprintf("%s-%s-%s", strings.ToLower(subject.Kind), subject.Name, roleRef.Name)
-}
+//
+// // generateBindingName generates a unique name for the binding
+// func generateBindingName(subject rbacv1.Subject, roleRef rbacv1.RoleRef) string {
+// 	return fmt.Sprintf("%s-%s-%s", strings.ToLower(subject.Kind), subject.Name, roleRef.Name)
+// }
 
 // SetupWithManager sets up the controller with the Manager
 func (r *TemporaryRBACReconciler) SetupWithManager(mgr ctrl.Manager) error {
