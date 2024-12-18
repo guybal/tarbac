@@ -5,18 +5,17 @@ load('ext://restart_process', 'docker_build_with_restart')
 GO_PROJECT_DIR = './'
 K8S_MANIFESTS = [
     './config/crd/bases/rbac.k8s.io_temporaryrbacs.yaml',
+    './config/crd/bases/rbac.k8s.io_clustertemporaryrbacs.yaml',
     './config/manager/manager.yaml',
     './config/manager/rbac.yaml',
     './config/manager/sa.yaml',
-    './config/samples/test-cluster-role.yaml',
-    './config/samples/test-role.yaml',
 ]
 
 local_resource(
   'compile',
   'go mod tidy && ' +
   'CGO_ENABLED=0 GOOS=linux go build -a -o manager main.go',
-  deps=['./main.go', './go.mod'],
+  deps=['./main.go', './go.mod', './api','./config','./controllers'],
 )
 
 # Use docker_build_with_restart for live code updates
