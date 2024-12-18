@@ -40,17 +40,18 @@ spec:
                     kind:
                       type: string
                       enum:
-                        - ClusterRole                                                                 # REMOVE
+                        - ClusterRole
                         - Role
                       description: The kind of role being referenced (e.g., ClusterRole, Role).
                     name:
                       type: string
                       description: The name of the role being referenced.
-                    namespace:                                                                        # REMOVE
-                      type: string
-                      nullable: true
-                      description: The namespace to create the binding (if not cluster scoped).
+#                    namespace:                                                                        # REMOVE
+#                      type: string
+#                      nullable: true
+#                      description: The namespace to create the binding (if not cluster scoped).
                   required:
+                    - apiVersion
                     - kind
                     - name
                 subjects:
@@ -70,23 +71,6 @@ spec:
                       namespace:
                         nullable: true
                         type: string
-#                subject:
-#                  nullable: true
-#                  type: object
-#                  properties:
-#                    kind:
-#                      type: string
-#                      enum:
-#                        - ServiceAccount
-#                        - User
-#                        - Group
-#                      description: The kind of subject (e.g., ServiceAccount, User, Group).
-#                    name:
-#                      type: string
-#                      description: The name of the subject.
-#                    namespace:
-#                      type: string
-#                      description: The namespace of the subject (only required for ServiceAccounts).
               required:
                 - duration
                 - roleRef
@@ -115,18 +99,6 @@ spec:
                       namespace:
                         type: string
                         description: The namespace of the associated child resource.
-#                childResource:
-#                  type: object
-#                  properties:
-#                    kind:
-#                      type: string
-#                      description: The kind of the associated child resource.
-#                    name:
-#                      type: string
-#                      description: The name of the associated child resource.
-#                    namespace:
-#                      type: string
-#                      description: The namespace of the associated child resource.
                 createdAt:
                   type: string
                   format: date-time
@@ -135,9 +107,6 @@ spec:
                   type: string
                   format: date-time
                   description: The timestamp when the TemporaryRBAC will expire.
-#                timeToLive:
-#                  type: string
-#                  description: The remaining time until expiration, as a human-readable string.
       additionalPrinterColumns:
         - name: State
           type: string
