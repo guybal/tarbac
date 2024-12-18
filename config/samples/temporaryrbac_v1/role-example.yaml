@@ -1,0 +1,29 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: get-secrets-role
+  namespace: default
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list"]
+---
+apiVersion: tarbac.io/v1
+kind: TemporaryRBAC
+metadata:
+  name: example-multiple-subjects-temporary-rbac
+  namespace: default
+spec:
+  subjects:
+    - kind: ServiceAccount
+      name: default
+      namespace: default
+    - kind: ServiceAccount
+      name: test
+      namespace: default
+  roleRef:
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: Role
+    name: get-secrets-role
+  duration: 1m
+  retentionPolicy: delete # retain
