@@ -1,0 +1,14 @@
+resources:
+  - crd/bases/rbac.k8s.io_clustertemporaryrbacs.yaml
+  - crd/bases/rbac.k8s.io_temporaryrbacs.yaml
+  - manager/manager.yaml
+  - manager/rbac.yaml
+  - manager/sa.yaml
+
+namespace: temporary-rbac-controller
+
+commonLabels:
+  app: temporary-rbac-controller
+
+commonAnnotations:
+  managed-by: kustomize
