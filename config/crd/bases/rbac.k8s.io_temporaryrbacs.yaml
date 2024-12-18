@@ -46,16 +46,11 @@ spec:
                     name:
                       type: string
                       description: The name of the role being referenced.
-#                    namespace:                                                                        # REMOVE
-#                      type: string
-#                      nullable: true
-#                      description: The namespace to create the binding (if not cluster scoped).
                   required:
                     - apiVersion
                     - kind
                     - name
                 subjects:
-#                  nullable: true
                   type: array
                   items:
                     type: object
@@ -120,10 +115,6 @@ spec:
           type: string
           description: Name of the child resource
           jsonPath: .status.childResource[*].name
-#        - name: Resource Namespace
-#          type: string
-#          description: The current namespace of the child resource.
-#          jsonPath: .status.childResource.namespace
         - name: Created At
           type: string #date
           description: The creation timestamp of the child resource.

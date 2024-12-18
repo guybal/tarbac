@@ -50,7 +50,6 @@ spec:
                     - kind
                     - name
                 subjects:
-#                  nullable: true
                   type: array
                   items:
                     type: object
@@ -116,10 +115,6 @@ spec:
           type: string
           description: Name of the child resource
           jsonPath: .status.childResource[*].name
-#        - name: Resource Namespace
-#          type: string
-#          description: The current namespace of the child resource.
-#          jsonPath: .status.childResource.namespace
         - name: Created At
           type: string #date
           description: The creation timestamp of the child resource.
