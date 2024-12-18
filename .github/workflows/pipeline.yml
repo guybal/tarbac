@@ -51,6 +51,9 @@ jobs:
             exit 1
           fi
 
+      - name: Generate Code
+        run: make generate
+
       - name: Update Docker Image Tag in Manifest
         run: |
           sed -i "s|${DOCKER_IMAGE}:${{ env.current_version }}|${DOCKER_IMAGE}:${{ env.new_version }}|g" $MANAGER_MANIFEST
