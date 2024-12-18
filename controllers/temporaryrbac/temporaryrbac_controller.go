@@ -3,7 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
-// 	"strings"
+	"strings"
 	"time"
 
 	tarbacv1 "github.com/guybal/tarbac/api/v1" // Adjust to match your actual module path
@@ -175,15 +175,8 @@ func (r *TemporaryRBACReconciler) ensureBindings(ctx context.Context, tempRBAC *
 			return err
 		}
 
-		// Record the last binding for status update
-// 		lastChildResource = &tarbacv1.ChildResource{
-// 			APIVersion: binding.GetObjectKind().GroupVersionKind().GroupVersion().String(),
-// 			Kind:       binding.GetObjectKind().GroupVersionKind().Kind,
-// 			Name:       binding.GetName(),
-// 			Namespace:  binding.GetNamespace(),
-// 		}
         child_resources = append(child_resources, tarbacv1.ChildResource{
-            APIVersion: binding.GetObjectKind().GroupVersionKind().GroupVersion().String(),
+            APIVersion: rbacv1.SchemeGroupVersion.String(), // binding.GetObjectKind().GroupVersionKind().GroupVersion().String(),
             Kind:       binding.GetObjectKind().GroupVersionKind().Kind,
             Name:       binding.GetName(),
             Namespace:  binding.GetNamespace(),
@@ -295,11 +288,11 @@ func (r *TemporaryRBACReconciler) updateStatusWithRetry(ctx context.Context, tem
 
 	return fmt.Errorf("status update failed after retries for TemporaryRBAC %s", tempRBAC.Name)
 }
-//
-// // generateBindingName generates a unique name for the binding
-// func generateBindingName(subject rbacv1.Subject, roleRef rbacv1.RoleRef) string {
-// 	return fmt.Sprintf("%s-%s-%s", strings.ToLower(subject.Kind), subject.Name, roleRef.Name)
-// }
+
+// generateBindingName generates a unique name for the binding
+func generateBindingName(subject rbacv1.Subject, roleRef rbacv1.RoleRef) string {
+	return fmt.Sprintf("%s-%s-%s", strings.ToLower(subject.Kind), subject.Name, roleRef.Name)
+}
 
 // SetupWithManager sets up the controller with the Manager
 func (r *TemporaryRBACReconciler) SetupWithManager(mgr ctrl.Manager) error {
