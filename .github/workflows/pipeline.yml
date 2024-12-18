@@ -70,13 +70,3 @@ jobs:
           git add $MANAGER_MANIFEST $VERSION_FILE
           git commit -m "Update to version ${{ env.new_version }}"
           git push
-
-#      - name: Clean Up Old Resources
-#        run: |
-#          kubectl delete -f config/manager || true
-#          kubectl delete -f config/crd/bases/rbac.k8s.io_temporaryrbacs.yaml || true
-#
-#      - name: Apply New YAML Manifests
-#        run: |
-#          kubectl apply -f config/crd/bases/rbac.k8s.io_temporaryrbacs.yaml
-#          kubectl apply -f config/manager
