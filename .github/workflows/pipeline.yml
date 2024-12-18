@@ -52,7 +52,9 @@ jobs:
           fi
 
       - name: Generate Code
-        run: make generate
+        run: |
+          go mod tidy
+          controller-gen crd paths=./api/v1 output:crd:artifacts:config=./config/crd/bases
 
       - name: Update Docker Image Tag in Manifest
         run: |
