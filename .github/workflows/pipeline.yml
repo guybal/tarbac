@@ -74,6 +74,7 @@ jobs:
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
+          git remote set-url origin https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/guybal/tarbac.git
           git add $MANAGER_MANIFEST $VERSION_FILE
           git commit -m "Update to version ${{ env.new_version }}"
-          git push
+          git push origin main
