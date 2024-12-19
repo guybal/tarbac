@@ -26,8 +26,8 @@ spec:
             - "--enable-leader-election=false"
           resources:
             limits:
-              memory: 64Mi
-              cpu: 50m
+              memory: 512Mi
+              cpu: 150m
             requests:
               memory: 32Mi
               cpu: 20m

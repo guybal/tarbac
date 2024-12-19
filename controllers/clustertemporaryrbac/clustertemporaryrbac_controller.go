@@ -145,11 +145,6 @@ func (r *ClusterTemporaryRBACReconciler) ensureBindings(ctx context.Context, clu
 			return err
 		}
 
-// 		childResources = append(childResources, tarbacv1.ChildResource{
-// 			APIVersion: roleBinding.GetObjectKind().GroupVersionKind().GroupVersion().String(),
-// 			Kind:       roleBinding.GetObjectKind().GroupVersionKind().Kind,
-// 			Name:       roleBinding.GetName(),
-// 		})
         // Add to childResources with proper Kind and APIVersion
 		childResources = append(childResources, tarbacv1.ChildResource{
 			APIVersion: rbacv1.SchemeGroupVersion.String(), // Correctly set the APIVersion
@@ -205,6 +200,11 @@ func (r *ClusterTemporaryRBACReconciler) cleanupBindings(ctx context.Context, cl
 	} else {
 		clusterTempRBAC.Status.ChildResource = remainingChildResources
 	}
+
+    // Update the state if no child resources remain
+    if clusterTempRBAC.Status.ChildResource == nil {
+        clusterTempRBAC.Status.State = "Expired"
+    }
 
 	// Check RetentionPolicy
 	if clusterTempRBAC.Spec.RetentionPolicy == "delete" && clusterTempRBAC.Status.ChildResource == nil {
