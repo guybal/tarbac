@@ -51,11 +51,11 @@ spec:
           description: The current state of the SudoRequest.
           jsonPath: .status.state
         - name: Created At
-          type: date
+          type: string #date
           description: When the SudoRequest was created.
           jsonPath: .status.createdAt
         - name: Expires At
-          type: date
+          type: string #date
           description: When the SudoRequest will expire.
           jsonPath: .status.expiresAt
       subresources:
