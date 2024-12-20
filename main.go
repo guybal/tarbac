@@ -5,7 +5,8 @@ import (
 	"os"
 
 	tarbacv1 "github.com/guybal/tarbac/api/v1" // Adjust to match your actual module path
-// 	controllers "github.com/guybal/tarbac/controllers"
+	sudorequest "github.com/guybal/tarbac/controllers/sudorequest"
+	clustersudorequest "github.com/guybal/tarbac/controllers/clustersudorequest"
     temporaryrbac "github.com/guybal/tarbac/controllers/temporaryrbac"
 	clustertemporaryrbac "github.com/guybal/tarbac/controllers/clustertemporaryrbac"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -60,6 +61,22 @@ func main() {
     	Scheme: mgr.GetScheme(),
     }).SetupWithManager(mgr); err != nil {
     	ctrl.Log.Error(err, "unable to create controller", "controller", "ClusterTemporaryRBAC")
+    	os.Exit(1)
+    }
+
+    // Add SudoRequestReconciler to the manager
+    if err = (&sudorequest.SudoRequestReconciler{
+        Client: mgr.GetClient(),
+    }).SetupWithManager(mgr); err != nil {
+        ctrl.Log.Error(err, "unable to create controller", "controller", "SudoRequest")
+        os.Exit(1)
+    }
+
+    // Add ClusterSudoRequestReconciler to the manager
+    if err = (&clustersudorequest.ClusterSudoRequestReconciler{
+    	Client: mgr.GetClient(),
+    }).SetupWithManager(mgr); err != nil {
+    	ctrl.Log.Error(err, "unable to create controller", "controller", "ClusterSudoRequest")
     	os.Exit(1)
     }
 

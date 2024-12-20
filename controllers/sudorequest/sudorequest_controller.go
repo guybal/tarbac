@@ -6,7 +6,7 @@ import (
 	"time"
 
 	v1 "github.com/guybal/tarbac/api/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+// 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -37,33 +37,36 @@ func (r *SudoRequestReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	// Set CreatedAt and ExpiresAt if not already set
 	if sudoRequest.Status.CreatedAt == nil {
-		now := metav1.Now()
-		sudoRequest.Status.CreatedAt = &now
-		sudoRequest.Status.ExpiresAt = &metav1.Time{Time: now.Add(duration)}
+// 		now := metav1.Now()
+// 		sudoRequest.Status.CreatedAt = &now
+// 		sudoRequest.Status.ExpiresAt = &metav1.Time{Time: now.Add(duration)}
 		sudoRequest.Status.State = "Pending"
 
 		if err := r.Status().Update(ctx, &sudoRequest); err != nil {
 			logger.Error(err, "Failed to update SudoRequest status")
 			return ctrl.Result{}, err
 		}
-		logger.Info("Set initial status for SudoRequest")
+        logger.Info(fmt.Sprintf("Set initial status for SudoRequest, requested duration: %s", duration.String()))
 	}
 
-	// Check if the SudoRequest has expired
-	if time.Now().After(sudoRequest.Status.ExpiresAt.Time) {
-		sudoRequest.Status.State = "Expired"
-		if err := r.Status().Update(ctx, &sudoRequest); err != nil {
-			logger.Error(err, "Failed to update expired SudoRequest status")
-			return ctrl.Result{}, err
-		}
-		logger.Info("SudoRequest has expired", "name", sudoRequest.Name)
-		return ctrl.Result{}, nil
-	}
+    if sudoRequest.Status.ExpiresAt != nil {
+        // Check if the SudoRequest has expired
+        if time.Now().After(sudoRequest.Status.ExpiresAt.Time) {
+            sudoRequest.Status.State = "Expired"
+            if err := r.Status().Update(ctx, &sudoRequest); err != nil {
+                logger.Error(err, "Failed to update expired SudoRequest status")
+                return ctrl.Result{}, err
+            }
+            logger.Info("SudoRequest has expired", "name", sudoRequest.Name)
+            return ctrl.Result{}, nil
+        }
 
-	// Requeue until expiration
-	timeUntilExpiration := time.Until(sudoRequest.Status.ExpiresAt.Time)
-	logger.Info("Requeueing for expiration check", "timeUntilExpiration", timeUntilExpiration)
-	return ctrl.Result{RequeueAfter: timeUntilExpiration}, nil
+        // Requeue until expiration
+        timeUntilExpiration := time.Until(sudoRequest.Status.ExpiresAt.Time)
+        logger.Info("Requeueing for expiration check", "timeUntilExpiration", timeUntilExpiration)
+        return ctrl.Result{RequeueAfter: timeUntilExpiration}, nil
+    }
+    return ctrl.Result{}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

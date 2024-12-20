@@ -23,6 +23,10 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&TemporaryRBACList{},
         &ClusterTemporaryRBAC{},
         &ClusterTemporaryRBACList{},
+        &SudoRequest{},
+        &SudoRequestList{},
+        &ClusterSudoRequest{},
+        &ClusterSudoRequestList{},
 	)
 	// Add the common metadata type
 	metav1.AddToGroupVersion(scheme, GroupVersion)
