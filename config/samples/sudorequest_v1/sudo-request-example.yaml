@@ -1,0 +1,21 @@
+apiVersion: tarbac.io/v1
+kind: SudoRequest
+metadata:
+  name: i-hate-life
+  namespace: default
+spec:
+  duration: 1h
+  policy: i-hate-life
+#---
+#apiVersion: v1
+#kind: SudoPolicy
+#metadata:
+#  name: i-hate-life
+#  namespace: team-a
+#spec:
+#  roleRef:
+#    apiGroup: rbac.authorization.k8s.io
+#    kind: ClusterRole
+#    name: cluster-admin
+#  allowedUsers:
+#    - name: i-hate-life
