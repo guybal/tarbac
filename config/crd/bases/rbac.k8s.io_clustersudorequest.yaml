@@ -1,0 +1,62 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: clustersudorequests.tarbac.io
+spec:
+  group: tarbac.io
+  names:
+    kind: ClusterSudoRequest
+    listKind: ClusterSudoRequestList
+    plural: clustersudorequests
+    singular: clustersudorequest
+  scope: Cluster
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                duration:
+                  type: string
+                  pattern: ^[0-9]+[smhd]$  # Match durations like "1h", "30m", "1d"
+                  description: The duration for which the sudo access is granted.
+                policy:
+                  type: string
+                  description: The name of the SudoPolicy to enforce for this request.
+              required:
+                - duration
+                - policy
+            status:
+              type: object
+              properties:
+                state:
+                  type: string
+                  description: The state of the ClusterSudoRequest (e.g., Pending, Approved, Expired).
+                createdAt:
+                  type: string
+                  format: date-time
+                  description: When the ClusterSudoRequest was created.
+                expiresAt:
+                  type: string
+                  format: date-time
+                  description: When the ClusterSudoRequest will expire.
+      additionalPrinterColumns:
+        - name: State
+          type: string
+          description: The current state of the ClusterSudoRequest.
+          jsonPath: .status.state
+        - name: Created At
+          type: string #date
+          description: When the ClusterSudoRequest was created.
+          jsonPath: .status.createdAt
+        - name: Expires At
+          type: string #date
+          description: When the ClusterSudoRequest will expire.
+          jsonPath: .status.expiresAt
+      subresources:
+        status: {}
