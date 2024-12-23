@@ -68,14 +68,13 @@ jobs:
           echo "${{ env.new_version }}" > $VERSION_FILE
           sed -i "s|${DOCKER_IMAGE}:${{ env.current_version }}|${DOCKER_IMAGE}:${{ env.new_version }}|g" $MANAGER_MANIFEST
 
-
       - name: Commit Version Changes
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/guybal/tarbac.git
+          git remote set-url origin https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/guybal/tarbac.git
           git add $MANAGER_MANIFEST $VERSION_FILE
           git commit -m "Update to version ${{ env.new_version }}"
           git tag -a ${{ env.new_version }} -m "${{ env.new_version }}" 
