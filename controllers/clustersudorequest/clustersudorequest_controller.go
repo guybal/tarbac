@@ -10,8 +10,13 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+// 	"k8s.io/apimachinery/pkg/runtime"
 )
-
+//
+// func AddToScheme(scheme *runtime.Scheme) error {
+//     return v1.AddToScheme(scheme)
+// }
+//
 type ClusterSudoRequestReconciler struct {
 	client.Client
 }

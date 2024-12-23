@@ -17,7 +17,11 @@ import (
     "sigs.k8s.io/controller-runtime/pkg/log"
     "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
-
+//
+// func AddToScheme(scheme *runtime.Scheme) error {
+//     return tarbacv1.AddToScheme(scheme)
+// }
+//
 type ClusterTemporaryRBACReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme

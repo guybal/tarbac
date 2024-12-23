@@ -18,6 +18,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
+func AddToScheme(scheme *runtime.Scheme) error {
+    return tarbacv1.AddToScheme(scheme)
+}
+
 type TemporaryRBACReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme

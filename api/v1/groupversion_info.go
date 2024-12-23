@@ -27,6 +27,10 @@ func addKnownTypes(scheme *runtime.Scheme) error {
         &SudoRequestList{},
         &ClusterSudoRequest{},
         &ClusterSudoRequestList{},
+        &SudoPolicy{},
+        &SudoPolicyList{},
+        &ClusterSudoPolicy{},
+        &ClusterSudoPolicyList{},
 	)
 	// Add the common metadata type
 	metav1.AddToGroupVersion(scheme, GroupVersion)
