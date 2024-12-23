@@ -14,8 +14,11 @@ type SudoRequestSpec struct {
 // SudoRequestStatus defines the observed state of SudoRequest
 type SudoRequestStatus struct {
 	State     string       `json:"state,omitempty"`     // Current state: Pending, Approved, Expired
+	RequestID     string       `json:"requestID,omitempty"`
+	ErrorMessage     string       `json:"errorMessage,omitempty"`
 	CreatedAt *metav1.Time `json:"createdAt,omitempty"` // Timestamp when the request was created
 	ExpiresAt *metav1.Time `json:"expiresAt,omitempty"` // Timestamp when the request will expire
+	ChildResource []ChildResource `json:"childResource,omitempty"` // Details of the associated resource
 }
 
 // +kubebuilder:object:root=true
