@@ -18,6 +18,6 @@ metadata:
   name: example-sudo-request
   namespace: default
 spec:
-  duration: "1h"
+  duration: "1m"
   policy: "self-service-namespace-admin"
 
