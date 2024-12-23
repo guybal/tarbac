@@ -1,4 +1,4 @@
-apiVersion: v1
+apiVersion: tarbac.io/v1
 kind: ClusterSudoPolicy
 metadata:
   name: self-service-cluster-admin
@@ -10,9 +10,5 @@ spec:
     name: cluster-admin
   allowedUsers:
     - name: i-hate-life
-  allowedNamespacesSelector:
-    matchLabels:
-      team: a
   allowedNamespaces:
-    - team-a
-    - team-b
+    - '*'

@@ -11,3 +11,13 @@ spec:
     name: cluster-admin
   allowedUsers:
     - name: masterclient
+---
+apiVersion: tarbac.io/v1
+kind: SudoRequest
+metadata:
+  name: example-sudo-request
+  namespace: default
+spec:
+  duration: "1h"
+  policy: "self-service-namespace-admin"
+
