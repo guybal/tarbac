@@ -4,18 +4,18 @@ load('ext://restart_process', 'docker_build_with_restart')
 # Paths and configuration
 GO_PROJECT_DIR = './'
 K8S_MANIFESTS = [
-    './config/crd/bases/rbac.k8s.io_temporaryrbacs.yaml',
-    './config/crd/bases/rbac.k8s.io_clustertemporaryrbacs.yaml',
     './config/manager/manager.yaml',
     './config/manager/rbac.yaml',
     './config/manager/sa.yaml',
+    './config/manager/webhook-cert.yaml',
+    './config/manager/webhook.yaml',
 ]
 
 local_resource(
   'compile',
   'go mod tidy && ' +
   'CGO_ENABLED=0 GOOS=linux go build -a -o manager main.go',
-  deps=['./main.go', './go.mod', './api','./config','./controllers'],
+  deps=['./main.go', './go.mod', './api','./config','./controllers', './webhooks'],
 )
 
 # Use docker_build_with_restart for live code updates
@@ -24,7 +24,7 @@ docker_build_with_restart(
     '.',
     dockerfile='./Dockerfile-tilt',
     entrypoint=['/manager'],
-    only=['./bin','./api','./config','./controllers', './go.mod', './go.sum', './main.go'],
+    only=['./bin','./api','./config','./controllers', './webhooks', './go.mod', './go.sum', './main.go'],
     live_update=[
         sync('./bin/manager', '/workspace'),  # Sync local changes to the container
     ],
@@ -38,7 +38,7 @@ k8s_yaml(K8S_MANIFESTS)
 k8s_resource(
     workload='temporary-rbac-controller',
     resource_deps=['compile'],
-    port_forwards=8080,  # Forward port 8080 for debugging
+    port_forwards="8080:9443",  # Forward port 8080 for debugging
     extra_pod_selectors=[{'app.kubernetes.io/name': 'manager'}],  # Adjust label as needed
 )
 
