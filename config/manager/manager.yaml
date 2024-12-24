@@ -32,11 +32,6 @@ spec:
             - name: webhook-cert
               mountPath: /tmp/k8s-webhook-server/serving-certs
               readOnly: true
-#          env:
-#            - name: TLS_CERT
-#              value: /tmp/k8s-webhook-server/serving-certs/tls.crt
-#            - name: TLS_KEY
-#              value: /tmp/k8s-webhook-server/serving-certs/tls.key
           resources:
             limits:
               memory: 512Mi

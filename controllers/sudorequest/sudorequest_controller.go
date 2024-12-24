@@ -131,8 +131,13 @@ func (r *SudoRequestReconciler) Reconcile(ctx context.Context, req ctrl.Request)
                 Namespace: temporaryRBAC.Namespace,
             },
         }
-        sudoRequest.Status.CreatedAt = temporaryRBAC.Status.CreatedAt
-        sudoRequest.Status.ExpiresAt = temporaryRBAC.Status.ExpiresAt
+
+        if temporaryRBAC.Status.CreatedAt != nil && sudoRequest.Status.CreatedAt == nil {
+            sudoRequest.Status.CreatedAt = temporaryRBAC.Status.CreatedAt
+        }
+        if temporaryRBAC.Status.ExpiresAt != nil && sudoRequest.Status.ExpiresAt == nil {
+            sudoRequest.Status.ExpiresAt = temporaryRBAC.Status.ExpiresAt
+        }
 //         sudoRequest.Status.State = temporaryRBAC.Status.State
         if err := r.Status().Update(ctx, &sudoRequest); err != nil {
             logger.Error(err, "Failed to update SudoRequest status with TemporaryRBAC details")

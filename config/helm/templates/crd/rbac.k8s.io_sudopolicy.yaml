@@ -1,0 +1,79 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: sudopolicies.tarbac.io
+spec:
+  group: tarbac.io
+  names:
+    kind: SudoPolicy
+    listKind: SudoPolicyList
+    plural: sudopolicies
+    singular: sudopolicy
+  scope: Namespaced
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                maxDuration:
+                  type: string
+                  pattern: ^[0-9]+[smhd]$  # Match durations like "4h", "30m", "1d"
+                  description: The maximum allowed duration for this policy.
+                roleRef:
+                  type: object
+                  properties:
+                    apiGroup:
+                      type: string
+                      description: The API group of the referenced role.
+                    kind:
+                      type: string
+                      enum:
+                        - Role
+                        - ClusterRole
+                      description: The kind of the role being referenced.
+                    name:
+                      type: string
+                      description: The name of the referenced role.
+                  required:
+                    - apiGroup
+                    - kind
+                    - name
+                allowedUsers:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        description: The name of the user allowed by this policy.
+              required:
+                - maxDuration
+                - roleRef
+                - allowedUsers
+            status:
+              type: object
+              properties:
+                state:
+                  type: string
+                  description: The current state of the SudoPolicy.
+      additionalPrinterColumns:
+        - name: Max Duration
+          type: string
+          description: The maximum duration allowed by the policy.
+          jsonPath: .spec.maxDuration
+        - name: Role Kind
+          type: string
+          description: The kind of the role referenced by the policy.
+          jsonPath: .spec.roleRef.kind
+        - name: Role Name
+          type: string
+          description: The name of the role referenced by the policy.
+          jsonPath: .spec.roleRef.name
+      subresources:
+        status: {}
