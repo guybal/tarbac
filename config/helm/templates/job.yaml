@@ -1,0 +1,76 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: generate-webhook-cert
+  namespace: {{ .Values.namespace.name }}
+  annotations:
+    "helm.sh/hook": post-install
+    "helm.sh/hook-delete-policy": hook-succeeded
+spec:
+  template:
+    spec:
+      serviceAccount: {{ .Values.serviceAccount.name }}
+      imagePullSecrets:
+        - name: {{ .Values.image.pullSecret.name }}
+      containers:
+        - name: cert-generator
+          image: docker.io/guybalmas/selfsigned-ca-injector:v0.0.1
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Generating TLS certificates..."
+              mkdir -p /certs
+              
+              cat <<EOF > /webhook-cert.cnf
+              [ req ]
+              default_bits       = 2048
+              default_md         = sha256
+              distinguished_name = req_distinguished_name
+              x509_extensions    = req_ext
+              prompt             = no
+              
+              [ req_distinguished_name ]
+              CN = webhook-service.temporary-rbac-controller.svc
+              
+              [ req_ext ]
+              subjectAltName = @alt_names
+              
+              [ alt_names ]
+              DNS.1 = webhook-service
+              DNS.2 = webhook-service.temporary-rbac-controller.svc
+              DNS.3 = webhook-service.temporary-rbac-controller.svc.cluster.local
+              EOF
+  
+              echo "Certificate configuration file:"
+              cat /webhook-cert.cnf
+              
+              echo "Generating private key and selfsigned certificate"
+              openssl req -x509 -nodes -newkey rsa:2048 \
+              -keyout certs/tls.key \
+              -out certs/tls.crt \
+              -days 365 \
+              -config webhook-cert.cnf || {
+                  echo "Failed to generate TLS certificates. Exiting..."
+                  exit 1
+                }
+
+              echo "Patching Kubernetes Secret..."
+              kubectl get secret {{ .Values.webhook.certSecretName }} --namespace={{ .Values.namespace.name }} > /dev/null 2>&1 \
+              && kubectl patch secret {{ .Values.webhook.certSecretName }} \
+              -p="{\"data\":{\"tls.crt\":\"$(base64 /certs/tls.crt | tr -d '\n')\",\"tls.key\":\"$(base64 /certs/tls.key | tr -d '\n')\"}}" \
+              || kubectl create secret tls {{ .Values.webhook.certSecretName }} \
+              --cert=/certs/tls.crt --key=/certs/tls.key --namespace={{ .Values.namespace.name }};
+                
+              echo "Retrieving CA Bundle from Secret..."
+              CA_BUNDLE=$(cat /certs/tls.crt | base64 | tr -d '\n')
+              echo "Injecting CA Bundle into MutatingWebhookConfiguration..."
+              kubectl patch mutatingwebhookconfiguration sudorequest-mutating-webhook --type='json' -p="[{'op': 'replace', 'path': '/webhooks/0/clientConfig/caBundle', 'value':'$CA_BUNDLE'}]";
+
+          volumeMounts:
+            - name: certs
+              mountPath: /certs
+      restartPolicy: OnFailure
+      volumes:
+        - name: certs
+          emptyDir: {}

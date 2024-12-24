@@ -1,0 +1,35 @@
+replicaCount: 1
+
+image:
+  repository: docker.io/guybalmas/temporary-rbac-controller
+  tag: v1.1.2
+  pullPolicy: IfNotPresent
+  pullSecret:
+    name: registry-creds
+
+namespace:
+  name: temporary-rbac-controller
+  create: true
+
+service:
+  name: webhook-service
+  type: ClusterIP
+  port: 9443
+
+resources:
+  limits:
+    memory: 512Mi
+    cpu: 150m
+  requests:
+    memory: 32Mi
+    cpu: 20m
+
+webhook:
+  certSecretName: webhook-cert
+  caBundle: ""
+
+rbac:
+  create: true
+
+serviceAccount:
+  name: temporary-rbac-controller-sa
