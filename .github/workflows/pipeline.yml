@@ -13,6 +13,7 @@ jobs:
       DOCKER_IMAGE: docker.io/guybalmas/temporary-rbac-controller
       VERSION_FILE: VERSION
       MANAGER_MANIFEST: config/manager/manager.yaml
+      HELM_CHART_SUBPATH: config/helm
 
     steps:
       - name: Checkout Code
@@ -67,8 +68,11 @@ jobs:
         run: |
           echo "${{ env.new_version }}" > $VERSION_FILE
           sed -i "s|${DOCKER_IMAGE}:${{ env.current_version }}|${DOCKER_IMAGE}:${{ env.new_version }}|g" $MANAGER_MANIFEST
-
-      - name: Commit Version Changes
+          sed -i "s|tag: .*|tag: $new_version|g" $HELM_CHART_SUBPATH/values.yaml
+          sed -i "s|appVersion: \".*\"|appVersion: \"$new_version\"|g" $HELM_CHART_SUBPATH/Chart.yaml
+                        
+                        
+                        - name: Commit Version Changes
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
