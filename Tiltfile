@@ -3,7 +3,14 @@ load('ext://restart_process', 'docker_build_with_restart')
 
 # Paths and configuration
 GO_PROJECT_DIR = './'
+
 K8S_MANIFESTS = [
+    './config/crd/bases/rbac.k8s.io_clustersudopolicy.yaml',
+    './config/crd/bases/rbac.k8s.io_clustersudorequest.yaml',
+    './config/crd/bases/rbac.k8s.io_clustertemporaryrbacs.yaml',
+    './config/crd/bases/rbac.k8s.io_sudopolicy.yaml',
+    './config/crd/bases/rbac.k8s.io_sudorequest.yaml',
+    './config/crd/bases/rbac.k8s.io_temporaryrbacs.yaml',
     './config/manager/manager.yaml',
     './config/manager/rbac.yaml',
     './config/manager/sa.yaml',
