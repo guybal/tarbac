@@ -3,20 +3,14 @@ package controllers
 import (
 	"context"
 	"time"
-// 	"fmt"
 
 	v1 "github.com/guybal/tarbac/api/v1"
-// 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-// 	"k8s.io/apimachinery/pkg/runtime"
+    apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
-//
-// func AddToScheme(scheme *runtime.Scheme) error {
-//     return v1.AddToScheme(scheme)
-// }
-//
+
 type SudoPolicyReconciler struct {
 	client.Client
 }
@@ -29,6 +23,10 @@ func (r *SudoPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// Fetch the SudoPolicy object
 	var sudoPolicy v1.SudoPolicy
 	if err := r.Get(ctx, req.NamespacedName, &sudoPolicy); err != nil {
+		if apierrors.IsNotFound(err) {
+            logger.Info("SudoPolicy resource not found. Ignoring since it must have been deleted.")
+            return ctrl.Result{}, nil
+        }
 		logger.Error(err, "Unable to fetch SudoPolicy")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
