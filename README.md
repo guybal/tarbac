@@ -1,135 +1,154 @@
-### **Step 1: Initialize Your Environment**
-Ensure the following tools are installed:
-- **Docker** (for building the image)
-- **kubectl** (for interacting with the cluster)
-- **Kustomize** (for Kubernetes manifests; integrated with `kubectl` 1.14+)
-- **Go** (to build the binary locally, optional if only using Docker)
+# Time and Role Based Access Controller
 
----
+## Prerequisites 
 
-### **Step 2: Build and Push the Docker Image**
+## Install
 
-#### **1. Build the Controller Binary**
-If you'd like to test locally before creating the Docker image:
-```bash
-go mod tidy            # Ensure dependencies are up to date
-go build -o bin/manager main.go
+### Install using Helm
+
+##### Prepare `tarbac-values.yaml` File
+```yaml
+image:
+  repository: docker.io/guybalmas/temporary-rbac-controller
+  tag: v1.1.2
+  pullSecret:
+    name: dockerhub-creds       
+
+namespace:
+  create: false # If already created
 ```
 
-#### **2. Build the Docker Image**
-Use the provided `Dockerfile` to build the controller image:
+##### Install 
 ```bash
-docker build -t ghcr.io/<your-org>/temporary-rbac-controller:v1.0.0 .
+
+helm install tarbac config/helm -f tarbac-values.yaml -n temporary-rbac-controller
 ```
 
-#### **3. Push the Docker Image**
-Push the image to a container registry (e.g., GitHub Container Registry, Docker Hub):
+##### Test
 ```bash
-docker login ghcr.io   # Authenticate with your registry
-docker push ghcr.io/<your-org>/temporary-rbac-controller:v1.0.0
+kubectl apply -f config/samples/sudorequest_v1/example.yaml
+
+bash config/samples/sudorequest_v1/verify.sh
 ```
-
-Replace `<your-org>` with your organization or username on the container registry.
-
----
-
-### **Step 3: Deploy the CRD**
-
-1. Apply the CustomResourceDefinition (CRD) manifest:
-   ```bash
-   kubectl apply -f config/crd/bases/rbac.k8s.io_temporaryrbacs.yaml
-   ```
-
-2. Verify that the CRD is installed:
-   ```bash
-   kubectl get crds
-   ```
-   Look for `temporaryrbacs.rbac.k8s.io` in the output.
-
----
-
-### **Step 4: Configure and Deploy the Controller**
-
-1. Update the image in the deployment manifest (`config/manager/manager.yaml`):
-   ```yaml
-   containers:
-     - name: manager
-       image: ghcr.io/<your-org>/temporary-rbac-controller:v1.0.0
-   ```
-
-2. Deploy the controller using Kustomize:
-   ```bash
-   kubectl apply -k config/default
-   ```
-
-3. Verify the controller deployment:
-   ```bash
-   kubectl get pods -n kube-system
-   ```
-
-   Look for a pod with the name `temporary-rbac-controller`.
-
----
-
-### **Step 5: Deploy a Sample `TemporaryRBAC` Resource**
-
-1. Apply a sample `TemporaryRBAC` resource:
-   ```bash
-   kubectl apply -f config/samples/temporaryrbac_v1_temporaryrbac.yaml
-   ```
-
-2. Verify that the `TemporaryRBAC` resource is created:
-   ```bash
-   kubectl get temporaryrbac
-   ```
-
-   Look for your sample resource (`example-temporary-rbac`) in the output.
-
-3. Check the associated RoleBinding or ClusterRoleBinding:
-   ```bash
-   kubectl get rolebindings -n default
-   kubectl get clusterrolebindings
-   ```
-
-   Ensure the binding matches the subject and role specified in the `TemporaryRBAC` resource.
-
----
-
-### **Step 6: Monitor Expiration and Cleanup**
-
-1. Check the `TemporaryRBAC` resource status:
-   ```bash
-   kubectl describe temporaryrbac example-temporary-rbac
-   ```
-
-2. Confirm that the RoleBinding or ClusterRoleBinding is deleted automatically after the specified duration:
-   ```bash
-   kubectl get rolebindings -n default
-   ```
-
----
-
-### **Summary of Commands**
-
+**Output**:
 ```bash
-# Step 1: Build the Docker image
-docker build -t ghcr.io/<your-org>/temporary-rbac-controller:v1.0.0 .
+> View runtime YAML manifest for SudoPolicy Rresource:
+apiVersion: tarbac.io/v1
+kind: SudoPolicy
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"tarbac.io/v1","kind":"SudoPolicy","metadata":{"annotations":{},"name":"self-service-namespace-admin","namespace":"default"},"spec":{"allowedUsers":[{"name":"masterclient"}],"maxDuration":"4h","roleRef":{"apiGroup":"rbac.authorization.k8s.io","kind":"ClusterRole","name":"cluster-admin"}}}
+  creationTimestamp: "2024-12-24T20:43:09Z"
+  generation: 1
+  name: self-service-namespace-admin
+  namespace: default
+  resourceVersion: "29492269"
+  uid: ffbca01d-8963-4c57-8f79-a8bcecfebe03
+spec:
+  allowedUsers:
+  - name: masterclient
+  maxDuration: 4h
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+    name: cluster-admin
+status:
+  state: Active
 
-# Step 2: Push the image to the registry
-docker login ghcr.io
-docker push ghcr.io/<your-org>/temporary-rbac-controller:v1.0.0
 
-# Step 3: Deploy the CRD
-kubectl apply -f config/crd/bases/rbac.k8s.io_temporaryrbacs.yaml
+> View runtime YAML manifest for SudoRequest resource:
+apiVersion: tarbac.io/v1
+kind: SudoRequest
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"tarbac.io/v1","kind":"SudoRequest","metadata":{"annotations":{},"name":"example-sudo-request","namespace":"default"},"spec":{"duration":"1m","policy":"self-service-namespace-admin"}}
+    tarbac.io/requester: masterclient
+    tarbac.io/requester-metadata: UID=, Groups=[system:masters system:authenticated]
+  creationTimestamp: "2024-12-24T20:43:10Z"
+  generation: 1
+  name: example-sudo-request
+  namespace: default
+  resourceVersion: "29492297"
+  uid: 3c1ccc4e-c7d9-4742-b491-1bbd36f21c82
+spec:
+  duration: 1m
+  policy: self-service-namespace-admin
+status:
+  childResource:
+  - apiVersion: tarbac.io/v1
+    kind: TemporaryRBAC
+    name: temporaryrbac-example-sudo-request
+    namespace: default
+  createdAt: "2024-12-24T20:43:10Z"
+  expiresAt: "2024-12-24T20:44:10Z"
+  requestID: 3c1ccc4e-c7d9-4742-b491-1bbd36f21c82
+  state: Approved
 
-# Step 4: Deploy the controller
-kubectl apply -k config/default
 
-# Step 5: Apply a sample TemporaryRBAC resource
-kubectl apply -f config/samples/temporaryrbac_v1_temporaryrbac.yaml
+> View runtime YAML manifest for TemporaryRBAC resource
+apiVersion: tarbac.io/v1
+kind: TemporaryRBAC
+metadata:
+  creationTimestamp: "2024-12-24T20:43:10Z"
+  generation: 1
+  name: temporaryrbac-example-sudo-request
+  namespace: default
+  ownerReferences:
+  - apiVersion: tarbac.io/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: SudoRequest
+    name: example-sudo-request
+    uid: 3c1ccc4e-c7d9-4742-b491-1bbd36f21c82
+  resourceVersion: "29492298"
+  uid: 1143dadf-409c-479e-bfa7-2926d1948eb9
+spec:
+  duration: 1m
+  retentionPolicy: retain
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+    name: cluster-admin
+  subjects:
+  - kind: User
+    name: masterclient
+status:
+  childResource:
+  - apiVersion: rbac.authorization.k8s.io/v1
+    kind: RoleBinding
+    name: user-masterclient-cluster-admin
+    namespace: default
+  createdAt: "2024-12-24T20:43:10Z"
+  expiresAt: "2024-12-24T20:44:10Z"
+  state: Created
 
-# Step 6: Monitor the controller and TemporaryRBAC behavior
-kubectl get pods -n kube-system
-kubectl get temporaryrbac
-kubectl describe temporaryrbac example-temporary-rbac
+
+> View runtime YAML manifest for RoleBinding resource
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  creationTimestamp: "2024-12-24T20:43:10Z"
+  labels:
+    tarbac.io/owner: temporaryrbac-example-sudo-request
+  name: user-masterclient-cluster-admin
+  namespace: default
+  ownerReferences:
+  - apiVersion: tarbac.io/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: TemporaryRBAC
+    name: temporaryrbac-example-sudo-request
+    uid: 1143dadf-409c-479e-bfa7-2926d1948eb9
+  resourceVersion: "29492287"
+  uid: a3ddfca0-7f73-440a-b931-ed9c73eaf34c
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: User
+  name: masterclient
 ```
