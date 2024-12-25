@@ -25,6 +25,8 @@ type ChildResource struct {
 // TemporaryRBACStatus defines the observed state of TemporaryRBAC
 type TemporaryRBACStatus struct {
 	State         string         `json:"state,omitempty"`         // State of the TemporaryRBAC
+	RequestID     string       `json:"requestID,omitempty"`
+	ErrorMessage  string       `json:"errorMessage,omitempty"`
 	ExpiresAt     *metav1.Time   `json:"expiresAt,omitempty"`     // Expiration time
 	CreatedAt     *metav1.Time   `json:"createdAt,omitempty"`     // Creation time
 	ChildResource []ChildResource `json:"childResource,omitempty"` // Details of the associated resource

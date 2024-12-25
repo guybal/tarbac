@@ -268,6 +268,13 @@ func (r *SudoRequestReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
         // Update the SudoRequest status to Approved
         sudoRequest.Status.State = "Approved"
+        if temporaryRBAC.Status.CreatedAt != nil && sudoRequest.Status.CreatedAt == nil {
+            sudoRequest.Status.CreatedAt = temporaryRBAC.Status.CreatedAt
+        }
+        if temporaryRBAC.Status.ExpiresAt != nil && sudoRequest.Status.ExpiresAt == nil {
+            sudoRequest.Status.ExpiresAt = temporaryRBAC.Status.ExpiresAt
+        }
+
         if err := r.Status().Update(ctx, &sudoRequest); err != nil {
             logger.Error(err, "Failed to update SudoRequest status to Approved")
             return ctrl.Result{}, err
