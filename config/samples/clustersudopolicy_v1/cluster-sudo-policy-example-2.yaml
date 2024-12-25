@@ -1,7 +1,7 @@
 apiVersion: tarbac.io/v1
 kind: ClusterSudoPolicy
 metadata:
-  name: self-service-cluster-admin
+  name: self-service-dev-admin
 spec:
   maxDuration: 4h
   roleRef:
@@ -9,6 +9,7 @@ spec:
     kind: ClusterRole
     name: cluster-admin
   allowedUsers:
-    - name: i-hate-life
+    - name: masterclient
   allowedNamespaces:
-    - 'default'
+    - default
+    - dev
