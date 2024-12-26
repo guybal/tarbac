@@ -1,0 +1,22 @@
+apiVersion: tarbac.io/v1
+kind: ClusterSudoPolicy
+metadata:
+  name: self-service-cluster-admin
+spec:
+  maxDuration: 4h
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+    name: cluster-admin
+  allowedUsers:
+    - name: masterclient
+  allowedNamespaces:
+    - '*' # For all namespaces
+---
+apiVersion: tarbac.io/v1
+kind: ClusterSudoRequest
+metadata:
+  name: temp-cluster-admin
+spec:
+  duration: 1m
+  policy: self-service-cluster-admin

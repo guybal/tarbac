@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+//     "github.com/go-logr/logr"
 )
 
 func AddToScheme(scheme *runtime.Scheme) error {
@@ -66,6 +67,19 @@ func (r *TemporaryRBACReconciler) Reconcile(ctx context.Context, req ctrl.Reques
         // Commit the status update to the API server
         if err := r.Status().Update(ctx, &tempRBAC); err != nil {
             logger.Error(err, "Failed to update TemporaryRBAC status with expiration date")
+            return ctrl.Result{}, err
+        }
+    }
+
+//     if tempRBAC.Status.RequestID == nil && hasOwnerRef {
+//         //fetch owner which is either a clustersudorequest or a sudorequest
+//         //fetch owner.status.requestID
+//         // set tempRBAC.Status.RequestID to owner.status.requestID
+//     }
+
+    if len(tempRBAC.OwnerReferences) > 0 {
+        if err := r.fetchAndSetRequestID(ctx, &tempRBAC); err != nil {
+            logger.Error(err, "Failed to fetch and set RequestID", "TemporaryRBAC", tempRBAC.Name)
             return ctrl.Result{}, err
         }
     }
@@ -292,6 +306,55 @@ func (r *TemporaryRBACReconciler) updateStatusWithRetry(ctx context.Context, tem
 
 	return fmt.Errorf("status update failed after retries for TemporaryRBAC %s", tempRBAC.Name)
 }
+
+func (r *TemporaryRBACReconciler) fetchAndSetRequestID(ctx context.Context, tempRBAC *tarbacv1.TemporaryRBAC) error {
+    logger := log.FromContext(ctx)
+
+    if tempRBAC.Status.RequestID == "" && len(tempRBAC.OwnerReferences) > 0 {
+        logger.Info("TemporaryRBAC missing RequestID, attempting to fetch owner reference")
+
+        // Loop through owner references
+        for _, ownerRef := range tempRBAC.OwnerReferences {
+            var ownerRequestID string
+
+            switch ownerRef.Kind {
+            case "ClusterSudoRequest":
+                var clusterSudoRequest tarbacv1.ClusterSudoRequest
+                err := r.Client.Get(ctx, client.ObjectKey{Name: ownerRef.Name}, &clusterSudoRequest)
+                if err != nil {
+                    logger.Error(err, "Failed to fetch ClusterSudoRequest", "ownerRef", ownerRef.Name)
+                    continue
+                }
+                ownerRequestID = clusterSudoRequest.Status.RequestID
+            case "SudoRequest":
+                var sudoRequest tarbacv1.SudoRequest
+                err := r.Client.Get(ctx, client.ObjectKey{Name: ownerRef.Name, Namespace: tempRBAC.Namespace}, &sudoRequest)
+                if err != nil {
+                    logger.Error(err, "Failed to fetch SudoRequest", "ownerRef", ownerRef.Name)
+                    continue
+                }
+                ownerRequestID = sudoRequest.Status.RequestID
+            default:
+                logger.Info("Unsupported owner reference kind, skipping", "kind", ownerRef.Kind)
+                continue
+            }
+
+            // Update the RequestID if found
+            if ownerRequestID != "" {
+                tempRBAC.Status.RequestID = ownerRequestID
+                if err := r.Status().Update(ctx, tempRBAC); err != nil {
+                    logger.Error(err, "Failed to update TemporaryRBAC status with RequestID", "TemporaryRBAC", tempRBAC.Name)
+                    return err
+                }
+                logger.Info("TemporaryRBAC status updated with RequestID", "RequestID", ownerRequestID)
+                break
+            }
+        }
+    }
+    return nil
+}
+
+
 
 // generateBindingName generates a unique name for the binding
 func generateBindingName(subject rbacv1.Subject, roleRef rbacv1.RoleRef) string {

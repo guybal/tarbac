@@ -153,6 +153,16 @@ func (r *ClusterSudoRequestReconciler) Reconcile(ctx context.Context, req ctrl.R
             } else {
                 logger.Info("Skipping ExpiresAt aggregation as it is nil", "TemporaryRBAC", temporaryRBAC.Name)
             }
+//             if temporaryRBAC.Status.RequestID == "" && clusterSudoRequest.Status.RequestID != "" {
+//                 temporaryRBAC.Status.RequestID = clusterSudoRequest.Status.RequestID
+//             } else {
+//                 logger.Info("Skipping RequestID aggregation as it is nil", "TemporaryRBAC", temporaryRBAC.Name)
+//             }
+//
+//             if err := r.Status().Update(ctx, &temporaryRBAC); err != nil {
+//                 logger.Error(err, "Failed to update TemporaryRBAC status", "TemporaryRBAC", temporaryRBAC.Name)
+//                 return ctrl.Result{}, err
+//             }
 
             // Check the state of the child resource
             switch temporaryRBAC.Status.State {
@@ -248,6 +258,9 @@ func (r *ClusterSudoRequestReconciler) createTemporaryRBACsForNamespaces(ctx con
                 RoleRef:  clusterSudoPolicy.Spec.RoleRef,
                 Duration: clusterSudoRequest.Spec.Duration,
             },
+//             Status: v1.TemporaryRBACStatus{
+//                 RequestID: clusterSudoRequest.Status.RequestID,
+//             },
         }
 
         if err := controllerutil.SetControllerReference(clusterSudoRequest, temporaryRBAC, r.Scheme); err != nil {
@@ -300,6 +313,9 @@ func (r *ClusterSudoRequestReconciler) createClusterTemporaryRBAC(ctx context.Co
 			RoleRef:  clusterSudoPolicy.Spec.RoleRef,
 			Duration: clusterSudoRequest.Spec.Duration,
 		},
+// 		Status: v1.TemporaryRBACStatus{
+// 		    RequestID: clusterSudoRequest.Status.RequestID,
+// 		},
 	}
 
 	if err := controllerutil.SetControllerReference(clusterSudoRequest, clusterTemporaryRBAC, r.Scheme); err != nil {
