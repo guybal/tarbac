@@ -33,9 +33,9 @@ spec:
               mountPath: /tmp/k8s-webhook-server/serving-certs
               readOnly: true
           resources:
-            limits:
-              memory: 512Mi
-              cpu: 150m
+#            limits:
+#              memory: 512Mi
+#              cpu: 150m
             requests:
               memory: 32Mi
               cpu: 20m

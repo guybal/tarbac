@@ -17,11 +17,7 @@ import (
     "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"k8s.io/client-go/tools/record"
 )
-//
-// func AddToScheme(scheme *runtime.Scheme) error {
-//     return v1.AddToScheme(scheme)
-// }
-//
+
 type SudoRequestReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme

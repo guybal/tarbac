@@ -46,7 +46,6 @@ func (r *ClusterSudoRequestReconciler) Reconcile(ctx context.Context, req ctrl.R
         return r.rejectRequest(ctx, &clusterSudoRequest, fmt.Sprintf("Invalid duration requested: %s", clusterSudoRequest.Spec.Duration), logger)
     }
 
-
     requester := clusterSudoRequest.Annotations["tarbac.io/requester"]
     if requester == "" {
         return r.rejectRequest(ctx, &clusterSudoRequest, "Requester information is missing", logger)
@@ -72,16 +71,6 @@ func (r *ClusterSudoRequestReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return ctrl.Result{}, nil
 	}
 	if clusterSudoRequest.Status.State == "Pending" {
-
-//         requester := clusterSudoRequest.Annotations["tarbac.io/requester"]
-//         if requester == "" {
-//             return r.rejectRequest(ctx, &clusterSudoRequest, "Requester information is missing", logger)
-//         }
-
-//         var clusterSudoPolicy v1.ClusterSudoPolicy
-//         if err := r.Get(ctx, client.ObjectKey{Name: clusterSudoRequest.Spec.Policy}, &clusterSudoPolicy); err != nil {
-//             return r.rejectRequest(ctx, &clusterSudoRequest, "Referenced policy not found", logger)
-//         }
 
         maxDuration, err := time.ParseDuration(clusterSudoPolicy.Spec.MaxDuration)
         if err != nil || duration > maxDuration {
@@ -120,75 +109,144 @@ func (r *ClusterSudoRequestReconciler) Reconcile(ctx context.Context, req ctrl.R
 
         // Aggregate data from child resources
         var createdAt, expiresAt *metav1.Time
-        var hasError, hasExpired bool
+ //         var hasError, hasExpired bool
 
         for _, childResource := range clusterSudoRequest.Status.ChildResource {
 
-            if childResource.Name == "" || childResource.Namespace == "" {
+            if childResource.Name == "" {
                 logger.Error(nil, "Child resource has incomplete data", "childResource", childResource)
                 continue
             }
 
             // Fetch child resource
-            var temporaryRBAC v1.TemporaryRBAC
-            err := r.Get(ctx, client.ObjectKey{Name: childResource.Name, Namespace: childResource.Namespace}, &temporaryRBAC)
-            if err != nil {
-                if apierrors.IsNotFound(err) {
-                    logger.Error(err, "Child TemporaryRBAC resource not found", "child", childResource)
-                    r.Recorder.Event(&clusterSudoRequest, "Warning", "MissingChildResource", fmt.Sprintf("Child resource %s/%s not found", childResource.Namespace, childResource.Name))
-                    continue
+            switch childResource.Kind {
+            case "TemporaryRBAC":
+                var temporaryRBAC v1.TemporaryRBAC
+                err := r.Get(ctx, client.ObjectKey{Name: childResource.Name, Namespace: childResource.Namespace}, &temporaryRBAC)
+                if err != nil {
+                    if apierrors.IsNotFound(err) {
+                        logger.Error(err, "Child TemporaryRBAC resource not found", "child", childResource)
+                        r.Recorder.Event(&clusterSudoRequest, "Warning", "MissingChildResource", fmt.Sprintf("Child resource %s/%s not found", childResource.Namespace, childResource.Name))
+                        continue
+                    }
+                    logger.Error(err, "Failed to fetch child resource", "child", childResource)
+                    return ctrl.Result{}, err
                 }
-                logger.Error(err, "Failed to fetch child resource", "child", childResource)
-                return ctrl.Result{}, err
+                // Aggregate createdAt and expiresAt if they are not set
+                if createdAt == nil && temporaryRBAC.Status.CreatedAt != nil {
+                    createdAt = temporaryRBAC.Status.CreatedAt
+                } else {
+                   logger.Info("Skipping CreatedAt aggregation as it is nil", "TemporaryRBAC", temporaryRBAC.Name)
+                }
+                if expiresAt == nil && temporaryRBAC.Status.ExpiresAt != nil {
+                    expiresAt = temporaryRBAC.Status.ExpiresAt
+                } else {
+                    logger.Info("Skipping ExpiresAt aggregation as it is nil", "TemporaryRBAC", temporaryRBAC.Name)
+                }
+
+                if temporaryRBAC.Status.State == "Expired" {
+                    clusterSudoRequest.Status.State = "Expired"
+//                     if err := r.Status().Update(ctx, &sudoRequest); err != nil {
+//                         logger.Error(err, "Failed to update expired SudoRequest status")
+//                         return ctrl.Result{}, err
+//                     }
+                    r.Recorder.Event(&clusterSudoRequest, "Warning", "Expired", fmt.Sprintf("ClusterSudoRequest Expired for User %s, revoked permissions for policy %s [UID: %s]", clusterSudoRequest.Annotations["tarbac.io/requester"], clusterSudoRequest.Spec.Policy, clusterSudoRequest.Status.RequestID))
+                    logger.Info("ClusterSudoRequest has expired", "name", clusterSudoRequest.Name)
+                    return ctrl.Result{}, nil
+                }
+
+                // Check the state of the child resource
+                switch temporaryRBAC.Status.State {
+                case "Expired":
+                    clusterSudoRequest.Status.State = "Expired"
+                    if err := r.Status().Update(ctx, &clusterSudoRequest); err != nil {
+                        logger.Error(err, "Failed to update expired ClusterSudoRequest status")
+                        return ctrl.Result{}, err
+                    }
+                    r.Recorder.Event(&clusterSudoRequest, "Warning", "Expired", fmt.Sprintf("ClusterSudoRequest Expired for User %s, revoked permissions for policy %s [UID: %s]", clusterSudoRequest.Annotations["tarbac.io/requester"], clusterSudoRequest.Spec.Policy, clusterSudoRequest.Status.RequestID))
+                    logger.Info("ClusterSudoRequest has expired", "name", clusterSudoRequest.Name)
+                    return ctrl.Result{}, nil
+                case "Error":
+                    clusterSudoRequest.Status.State = "Error"
+                    if err := r.Status().Update(ctx, &clusterSudoRequest); err != nil {
+                        logger.Error(err, "Failed to update error ClusterSudoRequest status")
+                        return ctrl.Result{}, err
+                    }
+                    r.Recorder.Event(&clusterSudoRequest, "Error", "Error", fmt.Sprintf("Error detected while processing ClusterSudoRequest for User '%s' and policy '%s' [UID: %s]", clusterSudoRequest.Annotations["tarbac.io/requester"], clusterSudoRequest.Spec.Policy, clusterSudoRequest.Status.RequestID))
+                    logger.Info("ClusterSudoRequest has expired", "name", clusterSudoRequest.Name)
+                    return ctrl.Result{}, nil
+                default:
+                    logger.Error(nil, "Unknown child resource kind", "kind", childResource.Kind, "child", childResource)
+                    r.Recorder.Event(&clusterSudoRequest, "Warning", "UnknownChildResource",
+                        fmt.Sprintf("Child resource kind %s is not recognized", childResource.Kind))
+                }
+            case "ClusterTemporaryRBAC":
+                var clusterTemporaryRBAC v1.ClusterTemporaryRBAC
+                err := r.Get(ctx, client.ObjectKey{Name: childResource.Name}, &clusterTemporaryRBAC) // Cluster-scoped, no namespace
+                if err != nil {
+                    if apierrors.IsNotFound(err) {
+                        logger.Error(err, "Child ClusterTemporaryRBAC resource not found", "child", childResource)
+                        r.Recorder.Event(&clusterSudoRequest, "Warning", "MissingChildResource",
+                            fmt.Sprintf("Child ClusterTemporaryRBAC resource %s not found", childResource.Name))
+                        continue
+                    }
+                    logger.Error(err, "Failed to fetch child ClusterTemporaryRBAC resource", "child", childResource)
+                    return ctrl.Result{}, err
+                }
+                // Aggregate createdAt and expiresAt if they are not set
+                if createdAt == nil && clusterTemporaryRBAC.Status.CreatedAt != nil {
+                    createdAt = clusterTemporaryRBAC.Status.CreatedAt
+                } else {
+                   logger.Info("Skipping CreatedAt aggregation as it is nil", "ClusterTemporaryRBAC", clusterTemporaryRBAC.Name)
+                }
+                if expiresAt == nil && clusterTemporaryRBAC.Status.ExpiresAt != nil {
+                    expiresAt = clusterTemporaryRBAC.Status.ExpiresAt
+                } else {
+                    logger.Info("Skipping ExpiresAt aggregation as it is nil", "ClusterTemporaryRBAC", clusterTemporaryRBAC.Name)
+                }
+
+                // Check the state of the child resource
+                switch clusterTemporaryRBAC.Status.State {
+                case "Expired":
+                    clusterSudoRequest.Status.State = "Expired"
+                    if err := r.Status().Update(ctx, &clusterSudoRequest); err != nil {
+                        logger.Error(err, "Failed to update expired ClusterSudoRequest status")
+                        return ctrl.Result{}, err
+                    }
+                    r.Recorder.Event(&clusterSudoRequest, "Warning", "Expired", fmt.Sprintf("ClusterSudoRequest Expired for User %s, revoked permissions for policy %s [UID: %s]", clusterSudoRequest.Annotations["tarbac.io/requester"], clusterSudoRequest.Spec.Policy, clusterSudoRequest.Status.RequestID))
+                    logger.Info("ClusterSudoRequest has expired", "name", clusterSudoRequest.Name)
+                    return ctrl.Result{}, nil
+                case "Error":
+                    clusterSudoRequest.Status.State = "Error"
+                    if err := r.Status().Update(ctx, &clusterSudoRequest); err != nil {
+                        logger.Error(err, "Failed to update error ClusterSudoRequest status")
+                        return ctrl.Result{}, err
+                    }
+                    r.Recorder.Event(&clusterSudoRequest, "Error", "Error", fmt.Sprintf("Error detected while processing ClusterSudoRequest for User '%s' and policy '%s' [UID: %s]", clusterSudoRequest.Annotations["tarbac.io/requester"], clusterSudoRequest.Spec.Policy, clusterSudoRequest.Status.RequestID))
+                    logger.Info("ClusterSudoRequest has expired", "name", clusterSudoRequest.Name)
+                    return ctrl.Result{}, nil
+                }
+                default:
+                    logger.Error(nil, "Unknown child resource kind", "kind", childResource.Kind, "child", childResource)
+                    r.Recorder.Event(&clusterSudoRequest, "Warning", "UnknownChildResource",
+                        fmt.Sprintf("Child resource kind %s is not recognized", childResource.Kind))
+                }
             }
 
-            // Aggregate createdAt and expiresAt if they are not set
-            if createdAt == nil && temporaryRBAC.Status.CreatedAt != nil {
-                createdAt = temporaryRBAC.Status.CreatedAt
-            } else {
-               logger.Info("Skipping CreatedAt aggregation as it is nil", "TemporaryRBAC", temporaryRBAC.Name)
-            }
-            if expiresAt == nil && temporaryRBAC.Status.ExpiresAt != nil {
-                expiresAt = temporaryRBAC.Status.ExpiresAt
-            } else {
-                logger.Info("Skipping ExpiresAt aggregation as it is nil", "TemporaryRBAC", temporaryRBAC.Name)
-            }
-//             if temporaryRBAC.Status.RequestID == "" && clusterSudoRequest.Status.RequestID != "" {
-//                 temporaryRBAC.Status.RequestID = clusterSudoRequest.Status.RequestID
-//             } else {
-//                 logger.Info("Skipping RequestID aggregation as it is nil", "TemporaryRBAC", temporaryRBAC.Name)
-//             }
+//         // Update ClusterSudoRequest status based on child resources
+//         if hasExpired {
+//             clusterSudoRequest.Status.State = "Expired"
+//         }
+//         if hasError {
+//             clusterSudoRequest.Status.State = "Error"
+//         }
 //
-//             if err := r.Status().Update(ctx, &temporaryRBAC); err != nil {
-//                 logger.Error(err, "Failed to update TemporaryRBAC status", "TemporaryRBAC", temporaryRBAC.Name)
-//                 return ctrl.Result{}, err
-//             }
-
-            // Check the state of the child resource
-            switch temporaryRBAC.Status.State {
-            case "Expired":
-                hasExpired = true
-                r.Recorder.Event(&clusterSudoRequest, "Warning", "ChildResourceExpired", fmt.Sprintf("Child resource %s/%s has expired", childResource.Namespace, childResource.Name))
-            case "Error":
-                hasError = true
-                r.Recorder.Event(&clusterSudoRequest, "Warning", "ChildResourceError", fmt.Sprintf("Child resource %s/%s encountered an error", childResource.Namespace, childResource.Name))
-            }
-        }
-
-        // Update ClusterSudoRequest status based on child resources
-        if hasExpired {
-            clusterSudoRequest.Status.State = "Expired"
-        }
-        if hasError {
-            clusterSudoRequest.Status.State = "Error"
-        }
-
-        if createdAt != nil {
-            clusterSudoRequest.Status.CreatedAt = createdAt
-        }
-        if expiresAt != nil {
-            clusterSudoRequest.Status.ExpiresAt = expiresAt
-        }
+//         if createdAt != nil {
+//             clusterSudoRequest.Status.CreatedAt = createdAt
+//         }
+//         if expiresAt != nil {
+//             clusterSudoRequest.Status.ExpiresAt = expiresAt
+//         }
 
         // Update the ClusterSudoRequest status
         if err := r.Client.Status().Update(ctx, &clusterSudoRequest); err != nil {
@@ -197,12 +255,8 @@ func (r *ClusterSudoRequestReconciler) Reconcile(ctx context.Context, req ctrl.R
         }
         logger.Info("ClusterSudoRequest status updated based on child resources", "state", clusterSudoRequest.Status.State)
 
-//         logger.Info("ClusterSudoRequest status updated based on child resources", "state", clusterSudoRequest.Status.State)
-//         timeUntilExpiration := time.Until(clusterSudoRequest.Status.ExpiresAt.Time)
-//         logger.Info("Requeueing for expiration check", "timeUntilExpiration", timeUntilExpiration)
-//         return ctrl.Result{RequeueAfter: timeUntilExpiration}, nil
     }
-//     return ctrl.Result{}, nil
+
     if clusterSudoRequest.Status.ExpiresAt != nil {
         timeUntilExpiration := time.Until(clusterSudoRequest.Status.ExpiresAt.Time)
         if timeUntilExpiration > 0 {
@@ -258,9 +312,6 @@ func (r *ClusterSudoRequestReconciler) createTemporaryRBACsForNamespaces(ctx con
                 RoleRef:  clusterSudoPolicy.Spec.RoleRef,
                 Duration: clusterSudoRequest.Spec.Duration,
             },
-//             Status: v1.TemporaryRBACStatus{
-//                 RequestID: clusterSudoRequest.Status.RequestID,
-//             },
         }
 
         if err := controllerutil.SetControllerReference(clusterSudoRequest, temporaryRBAC, r.Scheme); err != nil {
@@ -268,7 +319,7 @@ func (r *ClusterSudoRequestReconciler) createTemporaryRBACsForNamespaces(ctx con
             continue
         }
 
-        if err := r.Create(ctx, temporaryRBAC); err != nil {
+        if err := r.Client.Create(ctx, temporaryRBAC); err != nil {
             logger.Error(err, "Failed to create TemporaryRBAC", "namespace", namespace)
             continue
         }
@@ -276,7 +327,7 @@ func (r *ClusterSudoRequestReconciler) createTemporaryRBACsForNamespaces(ctx con
         logger.Info("TemporaryRBAC created successfully", "TemporaryRBAC", temporaryRBAC.Name, "namespace", namespace)
 
         childResources = append(childResources, v1.ChildResource{
-            APIVersion: "tarbac.io/v1",
+            APIVersion:   "tarbac.io/v1",
             Kind:       "TemporaryRBAC",
             Name:       temporaryRBAC.Name,
             Namespace:  namespace,
@@ -313,9 +364,6 @@ func (r *ClusterSudoRequestReconciler) createClusterTemporaryRBAC(ctx context.Co
 			RoleRef:  clusterSudoPolicy.Spec.RoleRef,
 			Duration: clusterSudoRequest.Spec.Duration,
 		},
-// 		Status: v1.TemporaryRBACStatus{
-// 		    RequestID: clusterSudoRequest.Status.RequestID,
-// 		},
 	}
 
 	if err := controllerutil.SetControllerReference(clusterSudoRequest, clusterTemporaryRBAC, r.Scheme); err != nil {
@@ -331,7 +379,7 @@ func (r *ClusterSudoRequestReconciler) createClusterTemporaryRBAC(ctx context.Co
 	clusterSudoRequest.Status.State = "Approved"
     childResources = append(childResources, v1.ChildResource{
         APIVersion: "tarbac.io/v1",
-        Kind:       "TemporaryRBAC",
+        Kind:       "ClusterTemporaryRBAC",
         Name:       clusterTemporaryRBAC.Name,
     })
     clusterSudoRequest.Status.ChildResource = childResources

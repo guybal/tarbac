@@ -16,7 +16,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-//     "github.com/go-logr/logr"
 )
 
 func AddToScheme(scheme *runtime.Scheme) error {
@@ -71,12 +70,6 @@ func (r *TemporaryRBACReconciler) Reconcile(ctx context.Context, req ctrl.Reques
         }
     }
 
-//     if tempRBAC.Status.RequestID == nil && hasOwnerRef {
-//         //fetch owner which is either a clustersudorequest or a sudorequest
-//         //fetch owner.status.requestID
-//         // set tempRBAC.Status.RequestID to owner.status.requestID
-//     }
-
     if len(tempRBAC.OwnerReferences) > 0 {
         if err := r.fetchAndSetRequestID(ctx, &tempRBAC); err != nil {
             logger.Error(err, "Failed to fetch and set RequestID", "TemporaryRBAC", tempRBAC.Name)
@@ -117,11 +110,8 @@ func (r *TemporaryRBACReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 func (r *TemporaryRBACReconciler) ensureBindings(ctx context.Context, tempRBAC *tarbacv1.TemporaryRBAC, duration time.Duration) error {
 	logger := log.FromContext(ctx)
 
-	// Collect subjects from both `spec.subject` and `spec.subjects`
 	var subjects []rbacv1.Subject
-    // 	if tempRBAC.Spec.Subject != (rbacv1.Subject{}) {
-    // 		subjects = append(subjects, tempRBAC.Spec.Subject)
-    // 	}
+
 	if len(tempRBAC.Spec.Subjects) > 0 {
 		subjects = append(subjects, tempRBAC.Spec.Subjects...)
 	}
@@ -194,7 +184,7 @@ func (r *TemporaryRBACReconciler) ensureBindings(ctx context.Context, tempRBAC *
 		}
 
         child_resources = append(child_resources, tarbacv1.ChildResource{
-            APIVersion: rbacv1.SchemeGroupVersion.String(), // binding.GetObjectKind().GroupVersionKind().GroupVersion().String(),
+            APIVersion:   rbacv1.SchemeGroupVersion.String(), // binding.GetObjectKind().GroupVersionKind().GroupVersion().String(),
             Kind:       binding.GetObjectKind().GroupVersionKind().Kind,
             Name:       binding.GetName(),
             Namespace:  binding.GetNamespace(),

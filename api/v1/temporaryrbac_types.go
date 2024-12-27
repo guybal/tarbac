@@ -8,7 +8,7 @@ import (
 
 // TemporaryRBACSpec defines the desired state of TemporaryRBAC
 type TemporaryRBACSpec struct {
-	Subjects []rbacv1.Subject     `json:"subjects,omitempty"` // Subjects
+	Subjects []rbacv1.Subject     `json:"subjects"` // Subjects
 	RoleRef  rbacv1.RoleRef       `json:"roleRef"`            // Role or ClusterRole reference
 	Duration string               `json:"duration"`           // Duration for the TemporaryRBAC
     RetentionPolicy string           `json:"retentionPolicy,omitempty"` // delete or retain
@@ -16,9 +16,9 @@ type TemporaryRBACSpec struct {
 
 // ChildResource represents details of the associated RoleBinding or ClusterRoleBinding
 type ChildResource struct {
-	APIVersion string `json:"apiVersion,omitempty"` // API version of the child resource
+	APIVersion string `json:"apiVersion"` // API version of the child resource
 	Name       string `json:"name"`                // Name of the child resource
-	Namespace  string `json:"namespace"`           // Namespace of the child resource
+	Namespace  string `json:"namespace,omitempty"`           // Namespace of the child resource
 	Kind       string `json:"kind"`                // Kind of the child resource
 }
 

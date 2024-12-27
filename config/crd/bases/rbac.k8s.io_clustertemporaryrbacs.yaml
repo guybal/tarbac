@@ -34,7 +34,7 @@ spec:
                 roleRef:
                   type: object
                   properties:
-                    apiVersion:
+                    apiGroup:
                       type: string
                       description: The apiVersion of role being referenced.
                     kind:
@@ -46,7 +46,7 @@ spec:
                       type: string
                       description: The name of the role being referenced.
                   required:
-                    - apiVersion
+                    - apiGroup
                     - kind
                     - name
                 subjects:

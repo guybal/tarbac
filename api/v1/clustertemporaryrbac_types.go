@@ -22,6 +22,58 @@ type ClusterTemporaryRBACList struct {
 	Items           []ClusterTemporaryRBAC `json:"items"`
 }
 
+func (in *ClusterTemporaryRBAC) DeepCopyInto(out *ClusterTemporaryRBAC) {
+    *out = *in
+    in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
+    out.Spec = in.Spec // Assuming Spec does not require DeepCopy
+    out.Status = in.Status // Assuming Status does not require DeepCopy
+}
+
+func (in *ClusterTemporaryRBAC) DeepCopy() *ClusterTemporaryRBAC {
+    if in == nil {
+        return nil
+    }
+    out := new(ClusterTemporaryRBAC)
+    in.DeepCopyInto(out)
+    return out
+}
+
+func (in *ClusterTemporaryRBAC) DeepCopyObject() runtime.Object {
+    if c := in.DeepCopy(); c != nil {
+        return c
+    }
+    return nil
+}
+
+func (in *ClusterTemporaryRBACList) DeepCopyInto(out *ClusterTemporaryRBACList) {
+    *out = *in
+    in.ListMeta.DeepCopyInto(&out.ListMeta)
+    if in.Items != nil {
+        in, out := &in.Items, &out.Items
+        *out = make([]ClusterTemporaryRBAC, len(*in))
+        for i := range *in {
+            (*in)[i].DeepCopyInto(&(*out)[i])
+        }
+    }
+}
+
+func (in *ClusterTemporaryRBACList) DeepCopy() *ClusterTemporaryRBACList {
+    if in == nil {
+        return nil
+    }
+    out := new(ClusterTemporaryRBACList)
+    in.DeepCopyInto(out)
+    return out
+}
+
+func (in *ClusterTemporaryRBACList) DeepCopyObject() runtime.Object {
+    if c := in.DeepCopy(); c != nil {
+        return c
+    }
+    return nil
+}
+
+
 // func (in *ClusterTemporaryRBACList) DeepCopyInto(out *ClusterTemporaryRBACList) {
 // 	*out = *in
 // 	out.TypeMeta = in.TypeMeta
@@ -35,37 +87,37 @@ type ClusterTemporaryRBACList struct {
 // 	}
 // }
 
-// DeepCopy manually implements the deepcopy function for ClusterTemporaryRBAC.
-func (in *ClusterTemporaryRBAC) DeepCopy() *ClusterTemporaryRBAC {
-	if in == nil {
-		return nil
-	}
-	out := new(ClusterTemporaryRBAC)
-	in.DeepCopyInto(out)
-	return out
-}
-
-// DeepCopyObject manually implements the deepcopy function for runtime.Object.
-func (in *ClusterTemporaryRBAC) DeepCopyObject() runtime.Object {
-	if c := in.DeepCopy(); c != nil {
-		return c
-	}
-	return nil
-}
-
-// DeepCopyInto manually implements the deepcopy function for ClusterTemporaryRBACList.
-func (in *ClusterTemporaryRBACList) DeepCopyInto(out *ClusterTemporaryRBACList) {
-	*out = *in
-	out.TypeMeta = in.TypeMeta // TypeMeta doesn't require deepcopy
-	in.ListMeta.DeepCopyInto(&out.ListMeta)
-	if in.Items != nil {
-		in, out := &in.Items, &out.Items
-		*out = make([]ClusterTemporaryRBAC, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
-		}
-	}
-}
+// // DeepCopy manually implements the deepcopy function for ClusterTemporaryRBAC.
+// func (in *ClusterTemporaryRBAC) DeepCopy() *ClusterTemporaryRBAC {
+// 	if in == nil {
+// 		return nil
+// 	}
+// 	out := new(ClusterTemporaryRBAC)
+// 	in.DeepCopyInto(out)
+// 	return out
+// }
+//
+// // DeepCopyObject manually implements the deepcopy function for runtime.Object.
+// func (in *ClusterTemporaryRBAC) DeepCopyObject() runtime.Object {
+// 	if c := in.DeepCopy(); c != nil {
+// 		return c
+// 	}
+// 	return nil
+// }
+//
+// // DeepCopyInto manually implements the deepcopy function for ClusterTemporaryRBACList.
+// func (in *ClusterTemporaryRBACList) DeepCopyInto(out *ClusterTemporaryRBACList) {
+// 	*out = *in
+// 	out.TypeMeta = in.TypeMeta // TypeMeta doesn't require deepcopy
+// 	in.ListMeta.DeepCopyInto(&out.ListMeta)
+// 	if in.Items != nil {
+// 		in, out := &in.Items, &out.Items
+// 		*out = make([]ClusterTemporaryRBAC, len(*in))
+// 		for i := range *in {
+// 			(*in)[i].DeepCopyInto(&(*out)[i])
+// 		}
+// 	}
+// }
 
 // type ClusterTemporaryRBACSpec struct {
 //     Subjects       []rbacv1.Subject `json:"subjects,omitempty"`

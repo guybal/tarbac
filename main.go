@@ -31,6 +31,13 @@ func main() {
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false, "Enable leader election for controller manager.")
 	flag.Parse()
 
+    defer func() {
+        if r := recover(); r != nil {
+            ctrl.Log.Error(fmt.Errorf("%v", r), "Application panic detected at startup")
+            os.Exit(1)
+        }
+    }()
+
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
 
 	// Create a runtime scheme
