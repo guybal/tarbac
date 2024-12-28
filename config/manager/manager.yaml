@@ -18,7 +18,7 @@ spec:
       serviceAccountName: temporary-rbac-controller-sa
       containers:
         - name: controller
-          image: docker.io/guybalmas/temporary-rbac-controller:v1.1.5
+          image: docker.io/guybalmas/temporary-rbac-controller:v1.1.6
           imagePullPolicy: IfNotPresent
           command:
             - /manager
@@ -33,9 +33,9 @@ spec:
               mountPath: /tmp/k8s-webhook-server/serving-certs
               readOnly: true
           resources:
-#            limits:
-#              memory: 512Mi
-#              cpu: 150m
+            limits:
+              memory: 512Mi
+              cpu: 150m
             requests:
               memory: 32Mi
               cpu: 20m

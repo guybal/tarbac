@@ -2,7 +2,7 @@ replicaCount: 1
 
 image:
   repository: docker.io/guybalmas/temporary-rbac-controller
-  tag: v1.1.4
+  tag: v1.1.6
   pullPolicy: IfNotPresent
   pullSecret:
     name: registry-creds
