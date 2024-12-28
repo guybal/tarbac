@@ -27,7 +27,7 @@ type ClusterSudoRequestReconciler struct {
 
 func (r *ClusterSudoRequestReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
-
+    var requestId string
 	logger.Info("Reconciling ClusterSudoRequest", "name", req.Name, "namespace", req.Namespace)
 
 	var clusterSudoRequest v1.ClusterSudoRequest
@@ -59,9 +59,20 @@ func (r *ClusterSudoRequestReconciler) Reconcile(ctx context.Context, req ctrl.R
     if clusterSudoRequest.Status.State == "" {
         r.Recorder.Event(&clusterSudoRequest, "Normal", "Submitted", fmt.Sprintf("User %s submitted a ClusterSudoRequest for policy %s for a duration of %s [UID: %s]", clusterSudoRequest.Annotations["tarbac.io/requester"], clusterSudoRequest.Spec.Policy, duration, string(clusterSudoRequest.ObjectMeta.UID)))
         clusterSudoRequest.Status.State = "Pending"
-        clusterSudoRequest.Status.RequestID = string(clusterSudoRequest.ObjectMeta.UID)
+        requestId = string(clusterSudoRequest.ObjectMeta.UID)
+        clusterSudoRequest.Status.RequestID = requestId
         if err := r.Client.Status().Update(ctx, &clusterSudoRequest); err != nil {
             logger.Error(err, "Failed to set initial 'Pending' status")
+            return ctrl.Result{}, err
+        }
+
+        if clusterSudoRequest.ObjectMeta.Labels == nil {
+            clusterSudoRequest.ObjectMeta.Labels = make(map[string]string)
+        }
+        clusterSudoRequest.ObjectMeta.Labels["tarbac.io/request-id"] = requestId
+        // Update the object with the new label
+        if err := r.Client.Update(ctx, &clusterSudoRequest); err != nil {
+            logger.Error(err, "Failed to update SudoRequest with RequestID label", "ClusterSudoRequest", clusterSudoRequest.Name)
             return ctrl.Result{}, err
         }
     }
