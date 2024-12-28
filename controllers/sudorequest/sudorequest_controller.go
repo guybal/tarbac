@@ -17,11 +17,7 @@ import (
     "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"k8s.io/client-go/tools/record"
 )
-//
-// func AddToScheme(scheme *runtime.Scheme) error {
-//     return v1.AddToScheme(scheme)
-// }
-//
+
 type SudoRequestReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
@@ -31,7 +27,7 @@ type SudoRequestReconciler struct {
 // Reconcile handles reconciliation for SudoRequest objects
 func (r *SudoRequestReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
     logger := log.FromContext(ctx)
-
+    var requestId string
     logger.Info("Reconciling SudoRequest", "name", req.Name, "namespace", req.Namespace)
 
     // Fetch the SudoRequest object
@@ -82,11 +78,23 @@ func (r *SudoRequestReconciler) Reconcile(ctx context.Context, req ctrl.Request)
     if sudoRequest.Status.State == "" {
         r.Recorder.Event(&sudoRequest, "Normal", "Submitted", fmt.Sprintf("User %s submitted a SudoRequest for policy %s for a duration of %s [UID: %s]", sudoRequest.Annotations["tarbac.io/requester"], sudoRequest.Spec.Policy, duration, string(sudoRequest.ObjectMeta.UID)))
         sudoRequest.Status.State = "Pending"
-        sudoRequest.Status.RequestID = string(sudoRequest.ObjectMeta.UID)
+        requestId = string(sudoRequest.ObjectMeta.UID)
+        sudoRequest.Status.RequestID = requestId
+
         if err := r.Client.Status().Update(ctx, &sudoRequest); err != nil {
             logger.Error(err, "Failed to set initial 'Pending' status")
             return ctrl.Result{}, err
         }
+
+        if sudoRequest.ObjectMeta.Labels == nil {
+               sudoRequest.ObjectMeta.Labels = make(map[string]string)
+           }
+           sudoRequest.ObjectMeta.Labels["tarbac.io/request-id"] = requestId
+           // Update the object with the new label
+           if err := r.Client.Update(ctx, &sudoRequest); err != nil {
+               logger.Error(err, "Failed to update SudoRequest with RequestID label", "SudoRequest", sudoRequest.Name)
+               return ctrl.Result{}, err
+           }
     }
 
     // If the TemporaryRBAC is already created, fetch and update SudoRequest status
@@ -268,6 +276,13 @@ func (r *SudoRequestReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
         // Update the SudoRequest status to Approved
         sudoRequest.Status.State = "Approved"
+        if temporaryRBAC.Status.CreatedAt != nil && sudoRequest.Status.CreatedAt == nil {
+            sudoRequest.Status.CreatedAt = temporaryRBAC.Status.CreatedAt
+        }
+        if temporaryRBAC.Status.ExpiresAt != nil && sudoRequest.Status.ExpiresAt == nil {
+            sudoRequest.Status.ExpiresAt = temporaryRBAC.Status.ExpiresAt
+        }
+
         if err := r.Status().Update(ctx, &sudoRequest); err != nil {
             logger.Error(err, "Failed to update SudoRequest status to Approved")
             return ctrl.Result{}, err

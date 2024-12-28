@@ -1,7 +1,7 @@
 apiVersion: tarbac.io/v1
 kind: ClusterSudoPolicy
 metadata:
-  name: self-service-dev-admin
+  name: self-service-cluster-admin
 spec:
   maxDuration: 4h
   roleRef:
@@ -11,5 +11,12 @@ spec:
   allowedUsers:
     - name: masterclient
   allowedNamespaces:
-    - default
-    - dev
+    - '*' # For all namespaces
+---
+apiVersion: tarbac.io/v1
+kind: ClusterSudoRequest
+metadata:
+  name: temp-cluster-admin
+spec:
+  duration: 1m
+  policy: self-service-cluster-admin

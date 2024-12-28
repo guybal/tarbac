@@ -5,11 +5,11 @@ resources:
   - crd/bases/rbac.k8s.io_sudorequest.yaml
   - crd/bases/rbac.k8s.io_clustersudopolicy.yaml
   - crd/bases/rbac.k8s.io_sudopolicy.yaml
-  - manager/webhook-cert.yaml
-  - manager/webhook.yaml
-  - manager/manager.yaml
-  - manager/rbac.yaml
-  - manager/sa.yaml
+#  - manager/webhook-cert.yaml
+#  - manager/webhook.yaml
+#  - manager/manager.yaml
+#  - manager/rbac.yaml
+#  - manager/sa.yaml
 
 namespace: temporary-rbac-controller
 

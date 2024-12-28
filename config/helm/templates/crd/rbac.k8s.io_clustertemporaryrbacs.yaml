@@ -34,7 +34,7 @@ spec:
                 roleRef:
                   type: object
                   properties:
-                    apiVersion:
+                    apiGroup:
                       type: string
                       description: The apiVersion of role being referenced.
                     kind:

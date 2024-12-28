@@ -31,6 +31,7 @@ type TemporaryRBACReconciler struct {
 func (r *TemporaryRBACReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
     currentTime := time.Now()
     logger := log.FromContext(ctx)
+    var requestId string
     logger.Info("Reconciling TemporaryRBAC", "namespace", req.Namespace, "name", req.Name)
 
     // Fetch the TemporaryRBAC object
@@ -51,9 +52,27 @@ func (r *TemporaryRBACReconciler) Reconcile(ctx context.Context, req ctrl.Reques
         return ctrl.Result{}, err
     }
 
+    if len(tempRBAC.OwnerReferences) > 0 {
+        if tempRBAC.Status.RequestID == "" {
+            if err := r.fetchAndSetRequestID(ctx, &tempRBAC); err != nil {
+                logger.Error(err, "Failed to fetch and set RequestID", "TemporaryRBAC", tempRBAC.Name)
+                return ctrl.Result{}, err
+            }
+        }
+    } else {
+        if tempRBAC.Status.RequestID == "" {
+            tempRBAC.Status.RequestID = string(tempRBAC.ObjectMeta.UID)
+//             if err := r.Status().Update(ctx, tempRBAC); err != nil {
+//                 logger.Error(err, "Failed to update TemporaryRBAC status")
+//                 return ctrl.Result{}, err
+//             }
+        }
+    }
+    requestId = tempRBAC.Status.RequestID
+
     if tempRBAC.Status.CreatedAt == nil || (tempRBAC.Status.ExpiresAt != nil && currentTime.Before(tempRBAC.Status.ExpiresAt.Time)) && currentTime.After(tempRBAC.Status.CreatedAt.Time) {
         // Ensure bindings are created and status is updated
-        if err := r.ensureBindings(ctx, &tempRBAC, duration); err != nil {
+        if err := r.ensureBindings(ctx, &tempRBAC, duration, requestId); err != nil {
             logger.Error(err, "Failed to ensure bindings for TemporaryRBAC")
             return ctrl.Result{}, err
         }
@@ -100,14 +119,11 @@ func (r *TemporaryRBACReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 }
 
 // ensureBindings creates or updates the RoleBinding or ClusterRoleBinding for the TemporaryRBAC resource
-func (r *TemporaryRBACReconciler) ensureBindings(ctx context.Context, tempRBAC *tarbacv1.TemporaryRBAC, duration time.Duration) error {
+func (r *TemporaryRBACReconciler) ensureBindings(ctx context.Context, tempRBAC *tarbacv1.TemporaryRBAC, duration time.Duration, requestId string) error {
 	logger := log.FromContext(ctx)
 
-	// Collect subjects from both `spec.subject` and `spec.subjects`
 	var subjects []rbacv1.Subject
-    // 	if tempRBAC.Spec.Subject != (rbacv1.Subject{}) {
-    // 		subjects = append(subjects, tempRBAC.Spec.Subject)
-    // 	}
+
 	if len(tempRBAC.Spec.Subjects) > 0 {
 		subjects = append(subjects, tempRBAC.Spec.Subjects...)
 	}
@@ -143,6 +159,7 @@ func (r *TemporaryRBACReconciler) ensureBindings(ctx context.Context, tempRBAC *
                     Namespace: tempRBAC.ObjectMeta.Namespace,
                     Labels: map[string]string{
                         "tarbac.io/owner": tempRBAC.Name,
+                        "tarbac.io/request-id": requestId,
                     },
                 },
                 Subjects: []rbacv1.Subject{subject},
@@ -157,6 +174,7 @@ func (r *TemporaryRBACReconciler) ensureBindings(ctx context.Context, tempRBAC *
                     Namespace: tempRBAC.ObjectMeta.Namespace,
                     Labels: map[string]string{
                         "tarbac.io/owner": tempRBAC.Name,
+                        "tarbac.io/request-id": requestId,
                     },
                 },
                 Subjects: []rbacv1.Subject{subject},
@@ -180,7 +198,7 @@ func (r *TemporaryRBACReconciler) ensureBindings(ctx context.Context, tempRBAC *
 		}
 
         child_resources = append(child_resources, tarbacv1.ChildResource{
-            APIVersion: rbacv1.SchemeGroupVersion.String(), // binding.GetObjectKind().GroupVersionKind().GroupVersion().String(),
+            APIVersion:   rbacv1.SchemeGroupVersion.String(), // binding.GetObjectKind().GroupVersionKind().GroupVersion().String(),
             Kind:       binding.GetObjectKind().GroupVersionKind().Kind,
             Name:       binding.GetName(),
             Namespace:  binding.GetNamespace(),
@@ -291,6 +309,65 @@ func (r *TemporaryRBACReconciler) updateStatusWithRetry(ctx context.Context, tem
 	}
 
 	return fmt.Errorf("status update failed after retries for TemporaryRBAC %s", tempRBAC.Name)
+}
+
+func (r *TemporaryRBACReconciler) fetchAndSetRequestID(ctx context.Context, tempRBAC *tarbacv1.TemporaryRBAC) error {
+    logger := log.FromContext(ctx)
+
+    if tempRBAC.Status.RequestID == "" && len(tempRBAC.OwnerReferences) > 0 {
+        logger.Info("TemporaryRBAC missing RequestID, attempting to fetch owner reference")
+
+        // Loop through owner references
+        for _, ownerRef := range tempRBAC.OwnerReferences {
+            var ownerRequestID string
+
+            switch ownerRef.Kind {
+            case "ClusterSudoRequest":
+                var clusterSudoRequest tarbacv1.ClusterSudoRequest
+                err := r.Client.Get(ctx, client.ObjectKey{Name: ownerRef.Name}, &clusterSudoRequest)
+                if err != nil {
+                    logger.Error(err, "Failed to fetch ClusterSudoRequest", "ownerRef", ownerRef.Name)
+                    continue
+                }
+                ownerRequestID = clusterSudoRequest.Status.RequestID
+            case "SudoRequest":
+                var sudoRequest tarbacv1.SudoRequest
+                err := r.Client.Get(ctx, client.ObjectKey{Name: ownerRef.Name, Namespace: tempRBAC.Namespace}, &sudoRequest)
+                if err != nil {
+                    logger.Error(err, "Failed to fetch SudoRequest", "ownerRef", ownerRef.Name)
+                    continue
+                }
+                ownerRequestID = sudoRequest.Status.RequestID
+            default:
+                logger.Info("Unsupported owner reference kind, skipping", "kind", ownerRef.Kind)
+                continue
+            }
+
+            // Update the RequestID if found
+            if ownerRequestID != "" {
+                // Add a label with the RequestID
+                if tempRBAC.Labels == nil {
+                    tempRBAC.Labels = make(map[string]string)
+                }
+                tempRBAC.Labels["tarbac.io/request-id"] = ownerRequestID
+
+                // Update the object with the new label
+                if err := r.Update(ctx, tempRBAC); err != nil {
+                    logger.Error(err, "Failed to update TemporaryRBAC labels with RequestID", "TemporaryRBAC", tempRBAC.Name)
+                    return err
+                }
+
+                tempRBAC.Status.RequestID = ownerRequestID
+                if err := r.Status().Update(ctx, tempRBAC); err != nil {
+                    logger.Error(err, "Failed to update TemporaryRBAC status with RequestID", "TemporaryRBAC", tempRBAC.Name)
+                    return err
+                }
+                logger.Info("TemporaryRBAC status updated with RequestID", "RequestID", ownerRequestID)
+                break
+            }
+        }
+    }
+    return nil
 }
 
 // generateBindingName generates a unique name for the binding
