@@ -27,7 +27,7 @@ type ClusterTemporaryRBACReconciler struct {
 func (r *ClusterTemporaryRBACReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	currentTime := time.Now()
 	logger := log.FromContext(ctx)
-
+    var requestId string
 	logger.Info("Reconciling ClusterTemporaryRBAC", "name", req.Name, "namespace", req.Namespace)
 
 	// Fetch the ClusterTemporaryRBAC object (cluster-scoped, so no namespace)
@@ -48,9 +48,27 @@ func (r *ClusterTemporaryRBACReconciler) Reconcile(ctx context.Context, req ctrl
 		return ctrl.Result{}, err
 	}
 
+    if len(clusterTempRBAC.OwnerReferences) > 0 {
+        if clusterTempRBAC.Status.RequestID == "" {
+            if err := r.fetchAndSetRequestID(ctx, &clusterTempRBAC); err != nil {
+                logger.Error(err, "Failed to fetch and set RequestID", "ClusterTemporaryRBAC", clusterTempRBAC.Name)
+                return ctrl.Result{}, err
+            }
+        }
+    } else {
+        if clusterTempRBAC.Status.RequestID == "" {
+            clusterTempRBAC.Status.RequestID = string(clusterTempRBAC.ObjectMeta.UID)
+//             if err := r.Status().Update(ctx, clusterTempRBAC); err != nil {
+//                 logger.Error(err, "Failed to update ClusterTemporaryRBAC status")
+//                 return ctrl.Result{}, err
+//             }
+        }
+    }
+    requestId = clusterTempRBAC.Status.RequestID
+
 	if clusterTempRBAC.Status.CreatedAt == nil {
 		// Ensure bindings are created and status is updated
-		if err := r.ensureBindings(ctx, &clusterTempRBAC, duration); err != nil {
+		if err := r.ensureBindings(ctx, &clusterTempRBAC, duration, requestId); err != nil {
 			logger.Error(err, "Failed to ensure bindings for ClusterTemporaryRBAC")
 			return ctrl.Result{}, err
 		}
@@ -67,12 +85,12 @@ func (r *ClusterTemporaryRBACReconciler) Reconcile(ctx context.Context, req ctrl
 		}
 	}
 
-    if len(clusterTempRBAC.OwnerReferences) > 0 {
-        if err := r.fetchAndSetRequestID(ctx, &clusterTempRBAC); err != nil {
-            logger.Error(err, "Failed to fetch and set RequestID", "ClusterTemporaryRBAC", clusterTempRBAC.Name)
-            return ctrl.Result{}, err
-        }
-    }
+//     if len(clusterTempRBAC.OwnerReferences) > 0 {
+//         if err := r.fetchAndSetRequestID(ctx, &clusterTempRBAC); err != nil {
+//             logger.Error(err, "Failed to fetch and set RequestID", "ClusterTemporaryRBAC", clusterTempRBAC.Name)
+//             return ctrl.Result{}, err
+//         }
+//     }
 
 	// Check expiration status
 	logger.Info("Checking expiration", "currentTime", currentTime, "expiresAt", clusterTempRBAC.Status.ExpiresAt)
@@ -104,7 +122,7 @@ func (r *ClusterTemporaryRBACReconciler) Reconcile(ctx context.Context, req ctrl
 }
 
 // ensureBindings creates ClusterRoleBindings for the ClusterTemporaryRBAC resource
-func (r *ClusterTemporaryRBACReconciler) ensureBindings(ctx context.Context, clusterTempRBAC *tarbacv1.ClusterTemporaryRBAC, duration time.Duration) error {
+func (r *ClusterTemporaryRBACReconciler) ensureBindings(ctx context.Context, clusterTempRBAC *tarbacv1.ClusterTemporaryRBAC, duration time.Duration, requestId string) error {
 	logger := log.FromContext(ctx)
 
 	var subjects []rbacv1.Subject
@@ -127,9 +145,10 @@ func (r *ClusterTemporaryRBACReconciler) ensureBindings(ctx context.Context, clu
 	for _, subject := range subjects {
 		roleBinding := &rbacv1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: generateBindingName(subject, clusterTempRBAC.Spec.RoleRef), // utils.GenerateBindingName
+				Name: generateBindingName(subject, clusterTempRBAC.Spec.RoleRef),
 				Labels: map[string]string{
 					"tarbac.io/owner": clusterTempRBAC.Name,
+					"tarbac.io/request-id": requestId,
 				},
 			},
 			Subjects: []rbacv1.Subject{subject},
@@ -139,7 +158,6 @@ func (r *ClusterTemporaryRBACReconciler) ensureBindings(ctx context.Context, clu
                 Name:     clusterTempRBAC.Spec.RoleRef.Name,
 			},
 		}
-//         roleBinding.GetObjectKind().SetGroupVersionKind(rbacv1.SchemeGroupVersion.WithKind("ClusterRoleBinding"))
 
 		// Set the OwnerReference on the ClusterRoleBinding
 		if err := controllerutil.SetControllerReference(clusterTempRBAC, roleBinding, r.Scheme); err != nil {
@@ -153,11 +171,6 @@ func (r *ClusterTemporaryRBACReconciler) ensureBindings(ctx context.Context, clu
 			return err
 		}
 
-// 		childResources = append(childResources, tarbacv1.ChildResource{
-// 			APIVersion: roleBinding.GetObjectKind().GroupVersionKind().GroupVersion().String(),
-// 			Kind:       roleBinding.GetObjectKind().GroupVersionKind().Kind,
-// 			Name:       roleBinding.GetName(),
-// 		})
         // Add to childResources with proper Kind and APIVersion
 		childResources = append(childResources, tarbacv1.ChildResource{
 			APIVersion: rbacv1.SchemeGroupVersion.String(), // Correctly set the APIVersion
@@ -272,12 +285,24 @@ func (r *ClusterTemporaryRBACReconciler) fetchAndSetRequestID(ctx context.Contex
 
             // Update the RequestID if found
             if ownerRequestID != "" {
-                tempRBAC.Status.RequestID = ownerRequestID
-                if err := r.Status().Update(ctx, tempRBAC); err != nil {
-                    logger.Error(err, "Failed to update ClusterTemporaryRBAC status with RequestID", "TemporaryRBAC", tempRBAC.Name)
+                // Add a label with the RequestID
+                if tempRBAC.Labels == nil {
+                    tempRBAC.Labels = make(map[string]string)
+                }
+                tempRBAC.Labels["tarbac.io/request-id"] = ownerRequestID
+
+                // Update the object with the new label
+                if err := r.Update(ctx, tempRBAC); err != nil {
+                    logger.Error(err, "Failed to update ClusterTemporaryRBAC labels with RequestID", "ClusterTemporaryRBAC", tempRBAC.Name)
                     return err
                 }
-                logger.Info("TemporaryRBAC status updated with RequestID", "RequestID", ownerRequestID)
+
+                tempRBAC.Status.RequestID = ownerRequestID
+                if err := r.Status().Update(ctx, tempRBAC); err != nil {
+                    logger.Error(err, "Failed to update ClusterTemporaryRBAC status with RequestID", "ClusterTemporaryRBAC", tempRBAC.Name)
+                    return err
+                }
+                logger.Info("ClusterTemporaryRBAC status updated with RequestID", "RequestID", ownerRequestID)
                 break
             }
         }
