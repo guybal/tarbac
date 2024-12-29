@@ -1,0 +1,7 @@
+apiVersion: tarbac.io/v1
+kind: ClusterSudoRequest
+metadata:
+  name: temp-cluster-admin
+spec:
+  duration: 5m
+  policy: self-service-cluster-admin

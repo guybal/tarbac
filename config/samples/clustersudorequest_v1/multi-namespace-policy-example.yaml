@@ -9,15 +9,7 @@ spec:
     kind: ClusterRole
     name: cluster-admin
   allowedUsers:
-    - name: masterclient
+    - name: test-user
   allowedNamespaces:
     - default
     - dev
----
-apiVersion: tarbac.io/v1
-kind: ClusterSudoRequest
-metadata:
-  name: multi-namespace-admin
-spec:
-  duration: 1m
-  policy: self-service-dev-admin

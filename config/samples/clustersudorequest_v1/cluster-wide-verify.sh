@@ -13,7 +13,7 @@ kubectl get clustertemporaryrbacs.tarbac.io cluster-temporaryrbac-temp-cluster-a
 echo
 echo
 echo "> View runtime YAML manifest for ClusterRoleBinding resource"
-kubectl get ClusterRoleBinding user-masterclient-cluster-admin -o yaml
+kubectl get ClusterRoleBinding user-test-user-cluster-admin -o yaml
 echo
 echo
 

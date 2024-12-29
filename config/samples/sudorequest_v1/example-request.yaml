@@ -1,0 +1,8 @@
+apiVersion: tarbac.io/v1
+kind: SudoRequest
+metadata:
+  name: example-sudo-request
+  namespace: default
+spec:
+  duration: "15m"
+  policy: "self-service-namespace-admin"
