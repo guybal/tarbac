@@ -84,7 +84,7 @@ jobs:
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           git remote set-url origin https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/guybal/tarbac.git
-          git add $MANAGER_MANIFEST $VERSION_FILE
+          git add $MANAGER_MANIFEST $VERSION_FILE $HELM_CHART_SUBPATH/Chart.yaml $HELM_CHART_SUBPATH/values.yaml
           git commit -m "Update to version ${{ env.new_version }}"
           git tag -a ${{ env.new_version }} -m "${{ env.new_version }}" 
           git push --follow-tags origin main
