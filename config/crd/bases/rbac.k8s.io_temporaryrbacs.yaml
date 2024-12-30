@@ -113,6 +113,10 @@ spec:
           type: string
           description: The current state of the TemporaryRBAC resource.
           jsonPath: .status.state
+        - name: Duration
+          type: string
+          description: The duration requested for elevated permissions.
+          jsonPath: .spec.duration
         - name: Child Resource
           type: string
           description: Kind and Name of the child resource

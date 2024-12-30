@@ -18,10 +18,10 @@ echo
 echo
 echo "> View runtime YAML manifest for RoleBinding resource"
 echo "'default' namespace:"
-kubectl get rolebinding user-masterclient-cluster-admin -n default -o yaml
+kubectl get rolebinding user-test-user-cluster-admin -n default -o yaml
 echo
 echo "'dev' namespace:"
-kubectl get rolebinding user-masterclient-cluster-admin -n default -o yaml
+kubectl get rolebinding user-test-user-cluster-admin -n default -o yaml
 echo
 echo
 

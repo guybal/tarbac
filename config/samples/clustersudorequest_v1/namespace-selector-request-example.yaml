@@ -1,0 +1,7 @@
+apiVersion: tarbac.io/v1
+kind: ClusterSudoRequest
+metadata:
+  name: multi-labeled-namespace-admin
+spec:
+  duration: 1m
+  policy: self-service-labeled-namespaces-admin

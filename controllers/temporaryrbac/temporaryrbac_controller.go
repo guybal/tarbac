@@ -62,10 +62,10 @@ func (r *TemporaryRBACReconciler) Reconcile(ctx context.Context, req ctrl.Reques
     } else {
         if tempRBAC.Status.RequestID == "" {
             tempRBAC.Status.RequestID = string(tempRBAC.ObjectMeta.UID)
-//             if err := r.Status().Update(ctx, tempRBAC); err != nil {
-//                 logger.Error(err, "Failed to update TemporaryRBAC status")
-//                 return ctrl.Result{}, err
-//             }
+            if err := r.Status().Update(ctx, &tempRBAC); err != nil {
+                logger.Error(err, "Failed to update TemporaryRBAC status")
+                return ctrl.Result{}, err
+            }
         }
     }
     requestId = tempRBAC.Status.RequestID

@@ -74,6 +74,10 @@ spec:
           type: string
           description: The current state of the ClusterSudoRequest.
           jsonPath: .status.state
+        - name: Duration
+          type: string
+          description: The duration requested for elevated permissions.
+          jsonPath: .spec.duration
         - name: Created At
           type: string #date
           description: When the ClusterSudoRequest was created.

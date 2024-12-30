@@ -13,7 +13,7 @@ kubectl get temporaryrbacs.tarbac.io temporaryrbac-example-sudo-request -n defau
 echo
 echo
 echo "> View runtime YAML manifest for RoleBinding resource"
-kubectl get rolebinding user-masterclient-cluster-admin -n default -o yaml
+kubectl get rolebinding user-test-user-cluster-admin -n default -o yaml
 echo
 echo
 

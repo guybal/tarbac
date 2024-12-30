@@ -54,8 +54,12 @@ func (a *SudoRequestAnnotator) handleSudoRequest(ctx context.Context, req admiss
 	if sudoRequest.Annotations == nil {
 		sudoRequest.Annotations = map[string]string{}
 	}
-	sudoRequest.Annotations["tarbac.io/requester"] = req.UserInfo.Username
-	sudoRequest.Annotations["tarbac.io/requester-metadata"] = fmt.Sprintf("UID=%s, Groups=%v", req.UserInfo.UID, req.UserInfo.Groups)
+	if sudoRequest.Annotations["tarbac.io/requester"] == "" {
+	    sudoRequest.Annotations["tarbac.io/requester"] = req.UserInfo.Username
+	}
+	if sudoRequest.Annotations["tarbac.io/requester-metadata"] == "" {
+        sudoRequest.Annotations["tarbac.io/requester-metadata"] = fmt.Sprintf("UID=%s, Groups=%v", req.UserInfo.UID, req.UserInfo.Groups)
+	}
 
 	fmt.Printf("Updated SudoRequest with annotations: %+v\n", sudoRequest.Annotations)
 
@@ -75,8 +79,12 @@ func (a *SudoRequestAnnotator) handleClusterSudoRequest(ctx context.Context, req
 	if clusterSudoRequest.Annotations == nil {
 		clusterSudoRequest.Annotations = map[string]string{}
 	}
-	clusterSudoRequest.Annotations["tarbac.io/requester"] = req.UserInfo.Username
-	clusterSudoRequest.Annotations["tarbac.io/requester-metadata"] = fmt.Sprintf("UID=%s, Groups=%v", req.UserInfo.UID, req.UserInfo.Groups)
+	if clusterSudoRequest.Annotations["tarbac.io/requester"] == "" {
+        clusterSudoRequest.Annotations["tarbac.io/requester"] = req.UserInfo.Username
+    }
+    if clusterSudoRequest.Annotations["tarbac.io/requester-metadata"] == "" {
+        clusterSudoRequest.Annotations["tarbac.io/requester-metadata"] = fmt.Sprintf("UID=%s, Groups=%v", req.UserInfo.UID, req.UserInfo.Groups)
+    }
 
 	fmt.Printf("Updated ClusterSudoRequest with annotations: %+v\n", clusterSudoRequest.Annotations)
 
