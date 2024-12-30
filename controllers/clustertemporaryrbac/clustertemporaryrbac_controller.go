@@ -58,10 +58,10 @@ func (r *ClusterTemporaryRBACReconciler) Reconcile(ctx context.Context, req ctrl
     } else {
         if clusterTempRBAC.Status.RequestID == "" {
             clusterTempRBAC.Status.RequestID = string(clusterTempRBAC.ObjectMeta.UID)
-//             if err := r.Status().Update(ctx, clusterTempRBAC); err != nil {
-//                 logger.Error(err, "Failed to update ClusterTemporaryRBAC status")
-//                 return ctrl.Result{}, err
-//             }
+            if err := r.Status().Update(ctx, &clusterTempRBAC); err != nil {
+                logger.Error(err, "Failed to update ClusterTemporaryRBAC status")
+                return ctrl.Result{}, err
+            }
         }
     }
     requestId = clusterTempRBAC.Status.RequestID
