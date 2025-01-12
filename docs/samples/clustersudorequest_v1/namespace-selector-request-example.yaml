@@ -3,5 +3,5 @@ kind: ClusterSudoRequest
 metadata:
   name: multi-labeled-namespace-admin
 spec:
-  duration: 1m
+  duration: 5m
   policy: self-service-labeled-namespaces-admin

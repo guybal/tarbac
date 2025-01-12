@@ -2,6 +2,8 @@ apiVersion: tarbac.io/v1
 kind: ClusterSudoPolicy
 metadata:
   name: self-service-labeled-namespaces-admin
+  labels:
+    foo: bar
 spec:
   maxDuration: 4h
   roleRef:
