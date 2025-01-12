@@ -46,7 +46,7 @@ spec:
                       type: string
                       description: The name of the role being referenced.
                   required:
-                    - apiVersion
+                    - apiGroup
                     - kind
                     - name
                 subjects:
@@ -75,6 +75,9 @@ spec:
                 state:
                   type: string
                   description: The current state of the TemporaryRBAC resource (e.g., Created, Expired).
+                requestID:
+                  type: string
+                  description: Request's UUID.
                 childResource:
                   type: array
                   description: The list of associated child resources.
@@ -102,11 +105,18 @@ spec:
                   type: string
                   format: date-time
                   description: The timestamp when the TemporaryRBAC will expire.
+                errorMessage:
+                  type: string
+                  description: Useful error message.
       additionalPrinterColumns:
         - name: State
           type: string
           description: The current state of the TemporaryRBAC resource.
           jsonPath: .status.state
+        - name: Duration
+          type: string
+          description: The duration requested for elevated permissions.
+          jsonPath: .spec.duration
         - name: Child Resource
           type: string
           description: Kind and Name of the child resource
