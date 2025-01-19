@@ -1,7 +1,9 @@
 apiVersion: tarbac.io/v1
 kind: ClusterSudoPolicy
 metadata:
-  name: self-service-dev-admin
+  name: self-service-labeled-namespaces-admin
+  labels:
+    foo: bar
 spec:
   maxDuration: 4h
   roleRef:
@@ -9,7 +11,7 @@ spec:
     kind: ClusterRole
     name: cluster-admin
   allowedUsers:
-    - name: masterclient
-  allowedNamespaces:
-    - default
-    - dev
+    - name: test-user
+  allowedNamespacesSelector:
+    matchLabels:
+      team: a
