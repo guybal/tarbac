@@ -9,6 +9,6 @@ spec:
     kind: ClusterRole
     name: cluster-admin
   allowedUsers:
-    - name: masterclient
+    - name: test-user
   allowedNamespaces:
     - '*' # For all namespaces
