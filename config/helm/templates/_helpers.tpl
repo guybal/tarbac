@@ -29,3 +29,20 @@ Returns true if webhook.certManager.enabled is false.
 {{- define "cert_manager_disabled" -}}
 {{- not (.Values.webhook.certManager.enabled | default false) -}}
 {{- end -}}
+
+{{/*
+Checks if the CA bundle is specified.
+Returns true if webhook.ca.caBundle is empty.
+*/}}
+{{- define "ca_bundle_unspecified" -}}
+{{- eq .Values.webhook.ca.caBundle "" -}}
+{{- end -}}
+
+{{/*
+Checks if the CA bundle is unspecified.
+Returns true if webhook.ca.caBundle isn't empty.
+*/}}
+{{- define "ca_bundle_specified" -}}
+{{- ne .Values.webhook.ca.caBundle "" -}}
+{{- end -}}
+

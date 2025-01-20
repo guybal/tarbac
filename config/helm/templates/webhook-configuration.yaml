@@ -2,8 +2,8 @@ apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
   name: sudorequest-mutating-webhook
-  {{- if include "cert_manager_enabled" . }}
   annotations:
+  {{- if include "cert_manager_enabled" . }}
     cert-manager.io/inject-ca-from: {{ .Values.namespace.name }}/{{ .Values.webhook.certManager.certName }}
   {{- end }}
 webhooks:
@@ -16,7 +16,9 @@ webhooks:
         namespace: {{ .Values.namespace.name }}
         path: "/mutate-v1-sudorequest"
         port: {{ .Values.service.port }}
+      {{- if include "ca_bundle_specified" . }}
       caBundle: {{ .Values.webhook.ca.caBundle | quote }}
+      {{- end }}
     rules:
       - operations: ["CREATE", "UPDATE"]
         apiGroups: ["tarbac.io"]

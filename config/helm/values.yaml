@@ -37,7 +37,6 @@ webhook:
   tls:
     certSecretName: webhook-cert-secret
   ca:
-    # If Cert-Manager is set to 'enabled: false', you must replace the <CA_BUNDLE> in the above example by a valid CA bundle which is a PEM-encoded (field value is Base64 encoded) CA bundle for validating the webhook's server certificate
     caBundle: ""
 
 rbac:

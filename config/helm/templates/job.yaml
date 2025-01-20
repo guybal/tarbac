@@ -1,4 +1,5 @@
 {{- if include "cert_manager_disabled" . }}
+  {{- if include "ca_bundle_unspecified" . }}
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -66,4 +67,5 @@ spec:
       volumes:
         - name: certs
           emptyDir: {}
+{{- end }}
 {{- end }}
