@@ -12,7 +12,6 @@ jobs:
     env:
       DOCKER_IMAGE: docker.io/guybalmas/temporary-rbac-controller
       VERSION_FILE: VERSION
-      MANAGER_MANIFEST: config/manager/manager.yaml
       HELM_CHART_SUBPATH: config/helm
 
     steps:
@@ -64,12 +63,13 @@ jobs:
           docker build -t "${DOCKER_IMAGE}:${{ env.new_version }}" .
           docker push "${DOCKER_IMAGE}:${{ env.new_version }}"
 
+      - name: Update Helm Chart
+        run: |
+          cp -r config/crd/bases/* config/helm/templates/crd/
+
       - name: Update Version
         run: |
           echo "${{ env.new_version }}" > $VERSION_FILE
-          
-          # Update deployment.yaml
-          sed -i "s|${DOCKER_IMAGE}:${{ env.current_version }}|${DOCKER_IMAGE}:${{ env.new_version }}|g" $MANAGER_MANIFEST
           
           # Update values.yaml
           sed -i "s|^  tag: .*|  tag: ${new_version}|g" $HELM_CHART_SUBPATH/values.yaml
@@ -84,7 +84,8 @@ jobs:
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           git remote set-url origin https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/guybal/tarbac.git
-          git add $MANAGER_MANIFEST $VERSION_FILE $HELM_CHART_SUBPATH/Chart.yaml $HELM_CHART_SUBPATH/values.yaml
+          git add $VERSION_FILE $HELM_CHART_SUBPATH/Chart.yaml $HELM_CHART_SUBPATH/values.yaml
+          git add config/helm/templates/crd
           git commit -m "Update to version ${{ env.new_version }}"
           git tag -a ${{ env.new_version }} -m "${{ env.new_version }}" 
           git push --follow-tags origin main
