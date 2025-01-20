@@ -3,7 +3,7 @@ name: temporary-rbac-controller
 description: A Helm chart for deploying the Temporary RBAC Controller
 type: application
 version: 1.1.0
-appVersion: "v1.1.8"
+appVersion: "v1.1.9"
 #dependencies:
 #  - name: cert-manager
 #    version: "v1.16.2"
