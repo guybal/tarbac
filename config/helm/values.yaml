@@ -9,7 +9,7 @@ image:
 
 namespace:
   name: tarbac-system
-  create: true
+  create: false
 
 service:
   name: webhook-service
@@ -24,30 +24,21 @@ resources:
     memory: 32Mi
     cpu: 20m
 
-
 webhook:
-  useCertManager: true
-  certIssuerName: webhook-selfsigned-issuer
-  certName: webhook-cert
-  certSecretName: webhook-cert-secret
-  caBundlePlaceholder: ""
-  caBundle: ""
-
-#webhook:
-#  certManager:
-#    enabled: true
-#    certName: webhook-cert
-#    selfsigned:
-#      certIssuerName: webhook-selfsigned-issuer
-#    issuer:
-#      apiVersion: ""
-#      kind: ""
-#      name: ""
-#  tls:
-#    certSecretName: webhook-cert-secret
-#  ca:
-#    caBundle: ""
-
+  certManager:
+    enabled: true
+    certName: webhook-cert
+    selfsigned:
+      certIssuerName: webhook-selfsigned-issuer
+    issuer:
+      apiVersion: ""
+      kind: ""
+      name: "" # Replace with your issuer name
+  tls:
+    certSecretName: webhook-cert-secret
+  ca:
+    # If Cert-Manager is set to 'enabled: false', you must replace the <CA_BUNDLE> in the above example by a valid CA bundle which is a PEM-encoded (field value is Base64 encoded) CA bundle for validating the webhook's server certificate
+    caBundle: ""
 
 rbac:
   create: true

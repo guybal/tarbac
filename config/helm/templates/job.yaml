@@ -1,4 +1,4 @@
-{{- if not .Values.webhook.useCertManager }}
+{{- if include "cert_manager_disabled" . }}
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -42,31 +42,22 @@ spec:
               DNS.2 = {{ .Values.service.name }}.{{ .Values.namespace.name }}.svc
               DNS.3 = {{ .Values.service.name }}.{{ .Values.namespace.name }}.svc.cluster.local
               EOF
-  
-              echo "Certificate configuration file:"
-              cat /webhook-cert.cnf
               
               echo "Generating private key and selfsigned certificate"
               openssl req -x509 -nodes -newkey rsa:2048 \
               -keyout certs/tls.key \
               -out certs/tls.crt \
               -days 365 \
-              -config webhook-cert.cnf || {
-                  echo "Failed to generate TLS certificates. Exiting..."
-                  exit 1
-                }
+              -config webhook-cert.cnf || exit 1
 
               echo "Patching Kubernetes Secret..."
-              kubectl get secret {{ .Values.webhook.certSecretName }} --namespace={{ .Values.namespace.name }} > /dev/null 2>&1 \
-              && kubectl patch secret {{ .Values.webhook.certSecretName }} \
-              -p="{\"data\":{\"tls.crt\":\"$(base64 /certs/tls.crt | tr -d '\n')\",\"tls.key\":\"$(base64 /certs/tls.key | tr -d '\n')\"}}" \
-              || kubectl create secret tls {{ .Values.webhook.certSecretName }} \
-              --cert=/certs/tls.crt --key=/certs/tls.key --namespace={{ .Values.namespace.name }};
-                
-              echo "Retrieving CA Bundle from Secret..."
-              CA_BUNDLE=$(cat /certs/tls.crt | base64 | tr -d '\n')
-              echo "Injecting CA Bundle into MutatingWebhookConfiguration..."
-              kubectl patch mutatingwebhookconfiguration sudorequest-mutating-webhook --type='json' -p="[{'op': 'replace', 'path': '/webhooks/0/clientConfig/caBundle', 'value':'$CA_BUNDLE'}]";
+              kubectl create secret tls {{ .Values.webhook.tls.certSecretName }} \
+              --cert=/certs/tls.crt --key=/certs/tls.key --namespace={{ .Values.namespace.name }} \
+              --dry-run=client -o yaml | kubectl apply -f -
+              
+              echo "Injecting SelfSigned CA Bundle into MutatingWebhookConfiguration..."
+              kubectl patch mutatingwebhookconfiguration sudorequest-mutating-webhook --type='json' \
+              -p="[{'op': 'replace', 'path': '/webhooks/0/clientConfig/caBundle', 'value':'$(base64 /certs/tls.crt | tr -d '\n')'}]";
 
           volumeMounts:
             - name: certs
