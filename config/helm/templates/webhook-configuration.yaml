@@ -12,7 +12,7 @@ webhooks:
         namespace: {{ .Values.namespace.name }}
         path: "/mutate-v1-sudorequest"
         port: {{ .Values.service.port }}
-      caBundle: {{ .Values.webhook.caBundle | quote }}
+      caBundle: {{ if .Values.webhook.useCertManager }}{{ printf "%s" .Values.webhook.caBundlePlaceholder }}{{ else }}{{ .Values.webhook.caBundle }}{{ end }}
     rules:
       - operations: ["CREATE", "UPDATE"]
         apiGroups: ["tarbac.io"]

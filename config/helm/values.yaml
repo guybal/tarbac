@@ -8,7 +8,7 @@ image:
     name: registry-creds
 
 namespace:
-  name: temporary-rbac-controller
+  name: tarbac-system
   create: true
 
 service:
@@ -24,9 +24,30 @@ resources:
     memory: 32Mi
     cpu: 20m
 
+
 webhook:
-  certSecretName: webhook-cert
+  useCertManager: true
+  certIssuerName: webhook-selfsigned-issuer
+  certName: webhook-cert
+  certSecretName: webhook-cert-secret
+  caBundlePlaceholder: ""
   caBundle: ""
+
+#webhook:
+#  certManager:
+#    enabled: true
+#    certName: webhook-cert
+#    selfsigned:
+#      certIssuerName: webhook-selfsigned-issuer
+#    issuer:
+#      apiVersion: ""
+#      kind: ""
+#      name: ""
+#  tls:
+#    certSecretName: webhook-cert-secret
+#  ca:
+#    caBundle: ""
+
 
 rbac:
   create: true

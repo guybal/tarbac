@@ -1,3 +1,4 @@
+{{- if not .Values.webhook.useCertManager }}
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -31,15 +32,15 @@ spec:
               prompt             = no
               
               [ req_distinguished_name ]
-              CN = webhook-service.temporary-rbac-controller.svc
+              CN = {{ .Values.service.name }}.{{ .Values.namespace.name }}.svc
               
               [ req_ext ]
               subjectAltName = @alt_names
               
               [ alt_names ]
-              DNS.1 = webhook-service
-              DNS.2 = webhook-service.temporary-rbac-controller.svc
-              DNS.3 = webhook-service.temporary-rbac-controller.svc.cluster.local
+              DNS.1 = {{ .Values.service.name }}
+              DNS.2 = {{ .Values.service.name }}.{{ .Values.namespace.name }}.svc
+              DNS.3 = {{ .Values.service.name }}.{{ .Values.namespace.name }}.svc.cluster.local
               EOF
   
               echo "Certificate configuration file:"
@@ -74,3 +75,4 @@ spec:
       volumes:
         - name: certs
           emptyDir: {}
+{{- end }}
