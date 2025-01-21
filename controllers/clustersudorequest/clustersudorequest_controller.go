@@ -6,6 +6,7 @@ import (
 	"time"
 
 	v1 "github.com/guybal/tarbac/api/v1"
+    utils "github.com/guybal/tarbac/utils"
 	corev1 "k8s.io/api/core/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -257,7 +258,7 @@ func (r *ClusterSudoRequestReconciler) createTemporaryRBACsForNamespaces(ctx con
     for _, namespace := range namespaces {
         temporaryRBAC := &v1.TemporaryRBAC{
             ObjectMeta: metav1.ObjectMeta{
-                Name:      fmt.Sprintf("temporaryrbac-%s-%s", clusterSudoRequest.Name, namespace),
+                Name:      utils.GenerateTempRBACName(rbacv1.Subject{Kind: "User", Name: requester}, clusterSudoRequest.Spec.Policy, clusterSudoRequest.Status.RequestID), // fmt.Sprintf("temporaryrbac-%s-%s", clusterSudoRequest.Name, namespace),
                 Namespace: namespace,
             },
             Spec: v1.TemporaryRBACSpec{
@@ -305,16 +306,16 @@ func (r *ClusterSudoRequestReconciler) createTemporaryRBACsForNamespaces(ctx con
 
 func (r *ClusterSudoRequestReconciler) createClusterTemporaryRBAC(ctx context.Context, clusterSudoRequest *v1.ClusterSudoRequest, clusterSudoPolicy *v1.ClusterSudoPolicy, duration time.Duration, logger logr.Logger) (ctrl.Result, error) {
 	var childResources []v1.ChildResource
-
+    var requester = clusterSudoRequest.Annotations["tarbac.io/requester"]
 	clusterTemporaryRBAC := &v1.ClusterTemporaryRBAC{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: fmt.Sprintf("cluster-temporaryrbac-%s", clusterSudoRequest.Name),
+			Name: utils.GenerateTempRBACName(rbacv1.Subject{Kind: "User", Name: requester}, clusterSudoRequest.Spec.Policy, clusterSudoRequest.Status.RequestID), //fmt.Sprintf("cluster-temporaryrbac-%s", clusterSudoRequest.Name),
 		},
 		Spec: v1.TemporaryRBACSpec{
 			Subjects: []rbacv1.Subject{
 				{
 					Kind: "User",
-					Name: clusterSudoRequest.Annotations["tarbac.io/requester"],
+					Name: requester, //clusterSudoRequest.Annotations["tarbac.io/requester"],
 				},
 			},
 			RoleRef:  clusterSudoPolicy.Spec.RoleRef,

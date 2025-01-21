@@ -10,12 +10,9 @@
 ```yaml
 image:
   repository: docker.io/guybalmas/temporary-rbac-controller
-  tag: v1.1.2
+  tag: v1.1.10
   pullSecret:
-    name: dockerhub-creds       
-
-namespace:
-  create: false # If already created
+    name: dockerhub-creds
 ```
 
 ##### Install 

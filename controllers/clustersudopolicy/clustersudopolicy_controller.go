@@ -14,10 +14,6 @@ import (
 // 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// func AddToScheme(scheme *runtime.Scheme) error {
-//     return v1.AddToScheme(scheme)
-// }
-//
 type ClusterSudoPolicyReconciler struct {
 	client.Client
 }
@@ -91,27 +87,6 @@ func (r *ClusterSudoPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		logger.Error(nil, "Either allowedNamespaces or allowedNamespacesSelector must be set")
 		return ctrl.Result{}, nil
 	}
-
-// 	// Parse namespaces into status
-// 	if ClusterSudoPolicy.Spec.AllowedNamespaces != nil {
-// 		namespaces = ClusterSudoPolicy.Spec.AllowedNamespaces
-// 	} else if ClusterSudoPolicy.Spec.AllowedNamespacesSelector != nil {
-// 		// Fetch namespaces based on selector
-// 		var namespaceList corev1.NamespaceList
-// 		selector, err := metav1.LabelSelectorAsSelector(ClusterSudoPolicy.Spec.AllowedNamespacesSelector)
-// 		if err != nil {
-// 			logger.Error(err, "Invalid label selector in ClusterSudoPolicy spec")
-// 			return ctrl.Result{}, err
-// 		}
-// 		if err := r.List(ctx, &namespaceList, &client.ListOptions{LabelSelector: selector}); err != nil {
-// 			logger.Error(err, "Failed to list namespaces")
-// 			return ctrl.Result{}, err
-// 		}
-// 		for _, ns := range namespaceList.Items {
-// 			namespaces = append(namespaces, ns.Name)
-// 		}
-// 	}
-
 
 	// Update ClusterSudoPolicy status
 	ClusterSudoPolicy.Status.State = "Active"

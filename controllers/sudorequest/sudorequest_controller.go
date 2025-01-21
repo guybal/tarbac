@@ -6,6 +6,7 @@ import (
 	"time"
 
 	v1 "github.com/guybal/tarbac/api/v1"
+    utils "github.com/guybal/tarbac/utils"
 // 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -103,7 +104,7 @@ func (r *SudoRequestReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
         var temporaryRBAC v1.TemporaryRBAC
         err := r.Get(ctx, client.ObjectKey{
-            Name:      fmt.Sprintf("temporaryrbac-%s", sudoRequest.Name),
+            Name:      utils.GenerateTempRBACName(rbacv1.Subject{Kind: "User", Name: requester}, sudoRequest.Spec.Policy, sudoRequest.Status.RequestID), // fmt.Sprintf("temporaryrbac-%s", sudoRequest.Name),
             Namespace: sudoRequest.Namespace,
         }, &temporaryRBAC)
 
@@ -242,7 +243,7 @@ func (r *SudoRequestReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
         temporaryRBAC := &v1.TemporaryRBAC{
             ObjectMeta: metav1.ObjectMeta{
-                Name:      fmt.Sprintf("temporaryrbac-%s", sudoRequest.Name),
+                Name:      utils.GenerateTempRBACName(rbacv1.Subject{Kind: "User", Name: requester}, sudoRequest.Spec.Policy, sudoRequest.Status.RequestID), // fmt.Sprintf("temporaryrbac-%s", sudoRequest.Name),
                 Namespace: sudoRequest.Namespace,
             },
             Spec: v1.TemporaryRBACSpec{
