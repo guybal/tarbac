@@ -18,6 +18,8 @@ type ClusterSudoPolicyReconciler struct {
 	client.Client
 }
 
+const ReconciliationInterval = time.Minute * 5
+
 // Reconcile handles reconciliation for ClusterSudoPolicy objects
 func (r *ClusterSudoPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
@@ -97,6 +99,11 @@ func (r *ClusterSudoPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	logger.Info("Successfully validated ClusterSudoPolicy", "name", ClusterSudoPolicy.Name)
+
+	if ClusterSudoPolicy.Spec.AllowedNamespacesSelector != nil {
+        logger.Info("Rescheduling reconciliation due to dynamic AllowedNamespacesSelector", "name", ClusterSudoPolicy.Name)
+        return ctrl.Result{RequeueAfter: ReconciliationInterval}, nil
+    }
 	return ctrl.Result{}, nil
 }
 
