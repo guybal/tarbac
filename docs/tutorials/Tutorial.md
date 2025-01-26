@@ -1,7 +1,3 @@
-Here's the fully elaborated version of the tutorial with no truncation of runtime outputs and expanded explanations for each example, ensuring it provides a comprehensive and production-grade walkthrough of TARBAC.
-
----
-
 # TARBAC Tutorial: Dynamic, Temporary RBAC for Kubernetes
 
 This tutorial demonstrates how to use **TARBAC** to dynamically assign temporary RBAC permissions in Kubernetes. You’ll learn to define policies, request temporary permissions, and observe how these permissions behave from both a user’s and an admin’s perspective.
