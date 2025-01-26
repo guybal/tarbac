@@ -4,5 +4,5 @@ metadata:
   name: example-sudo-request
   namespace: default
 spec:
-  duration: "15m"
-  policy: "self-service-namespace-admin"
+  duration: 15m
+  policy: self-service-namespace-admin
