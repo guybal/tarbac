@@ -78,6 +78,9 @@ spec:
                 state:
                   type: string
                   description: The current state of the policy.
+                errorMessage:
+                  type: string
+                  description: Useful error message.
                 namespaces:
                   type: array
                   items:

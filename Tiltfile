@@ -11,11 +11,11 @@ K8S_MANIFESTS = [
     './config/crd/bases/rbac.k8s.io_sudopolicy.yaml',
     './config/crd/bases/rbac.k8s.io_sudorequest.yaml',
     './config/crd/bases/rbac.k8s.io_temporaryrbacs.yaml',
-    './config/manager/manager.yaml',
-    './config/manager/rbac.yaml',
-    './config/manager/sa.yaml',
-    './config/manager/webhook-cert.yaml',
-    './config/manager/webhook.yaml',
+    './dev/manager/manager.yaml',
+    './dev/manager/rbac.yaml',
+    './dev/manager/sa.yaml',
+    './dev/manager/webhook-cert.yaml',
+    './dev/manager/webhook.yaml',
 ]
 
 local_resource(
@@ -31,7 +31,7 @@ docker_build_with_restart(
     '.',
     dockerfile='./Dockerfile-tilt',
     entrypoint=['/manager'],
-    only=['./bin','./api','./config','./controllers', './webhooks', './go.mod', './go.sum', './main.go'],
+    only=['./bin','./api','./config','./controllers', './webhooks', './go.mod', './go.sum', './main.go', './utils'],
     live_update=[
         sync('./bin/manager', '/workspace'),  # Sync local changes to the container
     ],

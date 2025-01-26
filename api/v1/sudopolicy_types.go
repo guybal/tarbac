@@ -1,9 +1,9 @@
 package v1
 
 import (
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-    rbacv1 "k8s.io/api/rbac/v1"
-// 	"k8s.io/apimachinery/pkg/runtime"
+	// 	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // RoleRef defines a reference to a role
@@ -16,10 +16,10 @@ import (
 
 // SudoPolicySpec defines the desired state of SudoPolicy
 type SudoPolicySpec struct {
-	MaxDuration           string     `json:"maxDuration"`                       // Maximum allowed duration
-	RoleRef               rbacv1.RoleRef     `json:"roleRef"`                          // Role or ClusterRole reference
-	AllowedUsers          []UserRef  `json:"allowedUsers"`                      // List of allowed users
-	AllowedNamespaces     []string   `json:"allowedNamespaces,omitempty"`       // Specific namespaces
+	MaxDuration               string                `json:"maxDuration"`                         // Maximum allowed duration
+	RoleRef                   rbacv1.RoleRef        `json:"roleRef"`                             // Role or ClusterRole reference
+	AllowedUsers              []UserRef             `json:"allowedUsers"`                        // List of allowed users
+	AllowedNamespaces         []string              `json:"allowedNamespaces,omitempty"`         // Specific namespaces
 	AllowedNamespacesSelector *metav1.LabelSelector `json:"allowedNamespacesSelector,omitempty"` // Namespace selector
 }
 
@@ -31,7 +31,8 @@ type UserRef struct {
 
 // SudoPolicyStatus defines the observed state of SudoPolicy
 type SudoPolicyStatus struct {
-	State string `json:"state,omitempty"` // Current state of the policy
+	State        string `json:"state,omitempty"` // Current state of the policy
+	ErrorMessage string `json:"errorMessage,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -44,6 +45,7 @@ type SudoPolicy struct {
 	Spec   SudoPolicySpec   `json:"spec,omitempty"`
 	Status SudoPolicyStatus `json:"status,omitempty"`
 }
+
 //
 // func (in *SudoPolicy) DeepCopyObject() runtime.Object {
 // 	if c := in.DeepCopy(); c != nil {
@@ -59,6 +61,7 @@ type SudoPolicyList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []SudoPolicy `json:"items"`
 }
+
 //
 // func (in *SudoPolicyList) DeepCopyObject() runtime.Object {
 // 	if c := in.DeepCopy(); c != nil {
@@ -92,20 +95,20 @@ type SudoPolicyList struct {
 // }
 
 func (in *SudoPolicySpec) DeepCopyInto(out *SudoPolicySpec) {
-    *out = *in
-    out.RoleRef = in.RoleRef // rbacv1.RoleRef is already a simple struct; no deep copy needed.
-    if in.AllowedUsers != nil {
-        in, out := &in.AllowedUsers, &out.AllowedUsers
-        *out = make([]UserRef, len(*in))
-        copy(*out, *in)
-    }
-    if in.AllowedNamespaces != nil {
-        in, out := &in.AllowedNamespaces, &out.AllowedNamespaces
-        *out = make([]string, len(*in))
-        copy(*out, *in)
-    }
-    if in.AllowedNamespacesSelector != nil {
-        in, out := &in.AllowedNamespacesSelector, &out.AllowedNamespacesSelector
-        *out = (*in).DeepCopy()
-    }
+	*out = *in
+	out.RoleRef = in.RoleRef // rbacv1.RoleRef is already a simple struct; no deep copy needed.
+	if in.AllowedUsers != nil {
+		in, out := &in.AllowedUsers, &out.AllowedUsers
+		*out = make([]UserRef, len(*in))
+		copy(*out, *in)
+	}
+	if in.AllowedNamespaces != nil {
+		in, out := &in.AllowedNamespaces, &out.AllowedNamespaces
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
+	if in.AllowedNamespacesSelector != nil {
+		in, out := &in.AllowedNamespacesSelector, &out.AllowedNamespacesSelector
+		*out = (*in).DeepCopy()
+	}
 }
