@@ -28,14 +28,18 @@ webhook:
   certManager:
     enabled: true
     certName: webhook-cert
+    # Default option
     selfsigned:
       certIssuerName: webhook-selfsigned-issuer
+    # Optional, set you own Issuer/ClusterIssuer
     issuer:
       apiVersion: ""
       kind: ""
       name: "" # Replace with your issuer name
   tls:
     certSecretName: webhook-cert-secret
+  # Optional, if cert-manager is disabled
+  # Provide PEM encoded base64 CA bundle
   ca:
     caBundle: ""
 
