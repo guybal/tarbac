@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/go-logr/logr"
 	v1 "github.com/guybal/tarbac/api/v1"
 	utils "github.com/guybal/tarbac/utils"
 
-	// 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,68 +23,60 @@ import (
 type SudoRequestReconciler struct {
 	client.Client
 	Scheme   *runtime.Scheme
-	Recorder record.EventRecorder // Add Recorder field
+	Recorder record.EventRecorder
 }
 
 // Reconcile handles reconciliation for SudoRequest objects
 func (r *SudoRequestReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 	var requestId string
-	logger.Info("Reconciling SudoRequest", "name", req.Name, "namespace", req.Namespace)
+
+	utils.LogInfo(logger, "Reconciling SudoRequest", "name", req.Name)
 
 	// Fetch the SudoRequest object
 	var sudoRequest v1.SudoRequest
 	if err := r.Get(ctx, req.NamespacedName, &sudoRequest); err != nil {
 		if apierrors.IsNotFound(err) {
-			logger.Info("SudoRequest resource not found. Ignoring since it must have been deleted.")
+			utils.LogInfo(logger, "SudoRequest resource not found. Ignoring since it must have been deleted.", "name", req.Name)
 			return ctrl.Result{}, nil
 		}
-		logger.Error(err, "Unable to fetch SudoRequest")
+		utils.LogError(logger, err, "Unable to fetch SudoRequest", "name", req.Name)
 		return ctrl.Result{}, err
 	}
 
-	if sudoRequest.Status.State == "Rejected" {
-		logger.Info("SudoRequest rejected")
+	requestId = r.getRequestID(&sudoRequest)
+
+	if sudoRequest.Status.State == "Rejected" || sudoRequest.Status.State == "Expired" {
+		utils.LogInfoUID(logger, "SudoRequest already processed", requestId, "state", sudoRequest.Status.State)
 		return ctrl.Result{}, nil
 	}
 
-	if sudoRequest.Status.State == "Expired" {
-		logger.Info("SudoRequest expired")
-		return ctrl.Result{}, nil
-	}
-
+	// Validate duration
 	duration, err := time.ParseDuration(sudoRequest.Spec.Duration)
-	if err != nil {
-		logger.Error(err, "Invalid duration in SudoRequest spec", "duration", sudoRequest.Spec.Duration)
-		sudoRequest.Status.State = "Rejected"
-		sudoRequest.Status.ErrorMessage = "Invalid requested duration"
-		r.Recorder.Event(&sudoRequest, "Warning", "Rejected", fmt.Sprintf("SudoRequest from User %s for policy %s was rejected due to invalid requested duration [UID: %s]", sudoRequest.Annotations["tarbac.io/requester"], sudoRequest.Spec.Policy, sudoRequest.Status.RequestID))
-		r.Status().Update(ctx, &sudoRequest)
-		return ctrl.Result{}, err
+	if err != nil || duration <= 0 {
+		return r.rejectRequest(ctx, &sudoRequest, fmt.Sprintf("Invalid duration requested: %s", sudoRequest.Spec.Duration), requestId)
 	}
 
+	// Validate requester
 	requester := sudoRequest.Annotations["tarbac.io/requester"]
-
-	// Check User
 	if requester == "" {
-		logger.Error(nil, "Requester annotation is missing")
-		sudoRequest.Status.State = "Rejected"
-		sudoRequest.Status.RequestID = string(sudoRequest.ObjectMeta.UID)
-		sudoRequest.Status.ErrorMessage = "Requester information is missing"
-		r.Recorder.Event(&sudoRequest, "Warning", "Rejected", fmt.Sprintf("SudoRequest from User %s for policy %s was rejected due to missing requester information [UID: %s]", sudoRequest.Annotations["tarbac.io/requester"], sudoRequest.Spec.Policy, sudoRequest.Status.RequestID))
-		r.Status().Update(ctx, &sudoRequest)
-		return ctrl.Result{}, fmt.Errorf("missing requester annotation")
+		return r.rejectRequest(ctx, &sudoRequest, "Requester information is missing", requestId)
+	}
+
+	// Validate referenced policy exists
+	var sudoPolicy v1.SudoPolicy
+	if err := r.Get(ctx, client.ObjectKey{Name: sudoRequest.Spec.Policy, Namespace: sudoRequest.Namespace}, &sudoPolicy); err != nil {
+		return r.rejectRequest(ctx, &sudoRequest, "Referenced policy not found", requestId)
 	}
 
 	// Initial State
 	if sudoRequest.Status.State == "" {
 		r.Recorder.Event(&sudoRequest, "Normal", "Submitted", fmt.Sprintf("User %s submitted a SudoRequest for policy %s for a duration of %s [UID: %s]", sudoRequest.Annotations["tarbac.io/requester"], sudoRequest.Spec.Policy, duration, string(sudoRequest.ObjectMeta.UID)))
 		sudoRequest.Status.State = "Pending"
-		requestId = string(sudoRequest.ObjectMeta.UID)
 		sudoRequest.Status.RequestID = requestId
 
 		if err := r.Client.Status().Update(ctx, &sudoRequest); err != nil {
-			logger.Error(err, "Failed to set initial 'Pending' status")
+			utils.LogErrorUID(logger, err, "Failed to set initial 'Pending' status", requestId, "SudoRequest", sudoRequest.Name)
 			return ctrl.Result{}, err
 		}
 
@@ -94,167 +86,154 @@ func (r *SudoRequestReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		sudoRequest.ObjectMeta.Labels["tarbac.io/request-id"] = requestId
 		// Update the object with the new label
 		if err := r.Client.Update(ctx, &sudoRequest); err != nil {
-			logger.Error(err, "Failed to update SudoRequest with RequestID label", "SudoRequest", sudoRequest.Name)
-			return ctrl.Result{}, err
+			return r.errorRequest(ctx, err, &sudoRequest, "Failed to update SudoRequest with RequestID label", requestId)
+
 		}
-	}
-
-	// If the TemporaryRBAC is already created, fetch and update SudoRequest status
-	if sudoRequest.Status.State == "Approved" {
-		requestId = string(sudoRequest.ObjectMeta.UID)
-		utils.LogInfoUID(logger, "Fetching TemporaryRBAC for SudoRequest", requestId)
-		// logger.Info("Fetching TemporaryRBAC for SudoRequest", "name", sudoRequest.Name)
-
-		var temporaryRBAC v1.TemporaryRBAC
-		err := r.Get(ctx, client.ObjectKey{
-			Name:      utils.GenerateTempRBACName(rbacv1.Subject{Kind: "User", Name: requester}, sudoRequest.Spec.Policy, sudoRequest.Status.RequestID), // fmt.Sprintf("temporaryrbac-%s", sudoRequest.Name),
-			Namespace: sudoRequest.Namespace,
-		}, &temporaryRBAC)
-
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				logger.Info("TemporaryRBAC not yet created, requeueing", "name", sudoRequest.Name)
-				return ctrl.Result{RequeueAfter: time.Second * 5}, nil
-			}
-			logger.Error(err, "Failed to fetch TemporaryRBAC")
-			sudoRequest.Status.State = "Error"
-			sudoRequest.Status.ErrorMessage = "Failed to fetch TemporaryRBAC"
-			r.Status().Update(ctx, &sudoRequest)
-			return ctrl.Result{}, err
-		}
-
-		if temporaryRBAC.Status.State == "Expired" {
-			sudoRequest.Status.State = "Expired"
-			if err := r.Status().Update(ctx, &sudoRequest); err != nil {
-				logger.Error(err, "Failed to update expired SudoRequest status")
-				return ctrl.Result{}, err
-			}
-			r.Recorder.Event(&sudoRequest, "Warning", "Expired", fmt.Sprintf("SudoRequest Expired for User %s, revoked permissions for policy %s [UID: %s]", sudoRequest.Annotations["tarbac.io/requester"], sudoRequest.Spec.Policy, sudoRequest.Status.RequestID))
-			logger.Info("SudoRequest has expired", "name", sudoRequest.Name)
-			return ctrl.Result{}, nil
-		}
-
-		// Update SudoRequest status with TemporaryRBAC details
-		sudoRequest.Status.ChildResource = []v1.ChildResource{
-			{
-				APIVersion: temporaryRBAC.APIVersion,
-				Kind:       "TemporaryRBAC",
-				Name:       temporaryRBAC.Name,
-				Namespace:  temporaryRBAC.Namespace,
-			},
-		}
-
-		if temporaryRBAC.Status.CreatedAt != nil && sudoRequest.Status.CreatedAt == nil {
-			sudoRequest.Status.CreatedAt = temporaryRBAC.Status.CreatedAt
-		}
-		if temporaryRBAC.Status.ExpiresAt != nil && sudoRequest.Status.ExpiresAt == nil {
-			sudoRequest.Status.ExpiresAt = temporaryRBAC.Status.ExpiresAt
-		}
-		//         sudoRequest.Status.State = temporaryRBAC.Status.State
-		if err := r.Status().Update(ctx, &sudoRequest); err != nil {
-			logger.Error(err, "Failed to update SudoRequest status with TemporaryRBAC details")
-			return ctrl.Result{}, err
-		}
-
-		utils.LogInfoUID(logger, "Successfully updated SudoRequest status with TemporaryRBAC details", requestId)
-		// logger.Info("Successfully updated SudoRequest status with TemporaryRBAC details", "TemporaryRBAC", temporaryRBAC.Name)
-
-		// Requeue until expiration
-		timeUntilExpiration := time.Until(sudoRequest.Status.ExpiresAt.Time)
-
-		if timeUntilExpiration <= 0 {
-			utils.LogInfoUID(logger, "SudoRequest has expired", requestId,
-				"expiredBy", timeUntilExpiration.String(), // Log how long ago it expired
-				"name", sudoRequest.Name,
-				"namespace", sudoRequest.Namespace)
-
-			// logger.Info("SudoRequest has expired",
-			// 	"expiredBy", -timeUntilExpiration, // Log how long ago it expired
-			// 	"name", sudoRequest.Name,
-			// 	"namespace", sudoRequest.Namespace)
-
-			sudoRequest.Status.State = "Expired"
-			if err := r.Status().Update(ctx, &sudoRequest); err != nil {
-				logger.Error(err, "Failed to update expired SudoRequest status")
-				return ctrl.Result{}, err
-			}
-			r.Recorder.Event(&sudoRequest, "Warning", "Expired", fmt.Sprintf("SudoRequest Expired for User %s, revoked permissions for policy %s [UID: %s]", sudoRequest.Annotations["tarbac.io/requester"], sudoRequest.Spec.Policy, sudoRequest.Status.RequestID))
-			return ctrl.Result{}, nil
-		}
-
-		utils.LogInfoUID(logger, "Requeueing for expiration check, time until expiration: "+timeUntilExpiration.String(), requestId)
-		// logger.Info("Requeueing for expiration check", "timeUntilExpiration", timeUntilExpiration)
-		return ctrl.Result{RequeueAfter: timeUntilExpiration}, nil
 	}
 
 	// If TemporaryRBAC is not yet created, create it
 	if sudoRequest.Status.State == "Pending" {
-		logger.Info("Creating TemporaryRBAC for SudoRequest", "name", sudoRequest.Name)
-
-		var sudoPolicy v1.SudoPolicy
-		if err := r.Get(ctx, client.ObjectKey{
-			Name:      sudoRequest.Spec.Policy,
-			Namespace: sudoRequest.Namespace,
-		}, &sudoPolicy); err != nil {
-			logger.Error(err, "Failed to fetch referenced SudoPolicy")
-			sudoRequest.Status.State = "Rejected"
-			sudoRequest.Status.ErrorMessage = "Referenced policy not found"
-			r.Recorder.Event(&sudoRequest, "Warning", "Rejected", fmt.Sprintf("SudoRequest for User %s was rejected due to missing policy: %s [UID: %s]", sudoRequest.Annotations["tarbac.io/requester"], sudoRequest.Spec.Policy, sudoRequest.Status.RequestID))
-			r.Status().Update(ctx, &sudoRequest)
-			return ctrl.Result{}, err
-		}
 
 		maxDuration, err := time.ParseDuration(sudoPolicy.Spec.MaxDuration)
 		if err != nil {
-			logger.Error(err, "Invalid maxDuration in SudoPolicy spec", "maxDuration", sudoPolicy.Spec.MaxDuration)
-			sudoRequest.Status.State = "Rejected"
-			sudoRequest.Status.ErrorMessage = "Invalid policy max duration"
-			r.Status().Update(ctx, &sudoRequest)
-			return ctrl.Result{}, err
+			return r.errorRequest(ctx, err, &sudoRequest, "Invalid maxDuration in SudoPolicy spec", requestId)
 		}
 
-		if duration > maxDuration || duration <= 0 {
-			logger.Info("SudoRequest duration exceeds maxDuration in policy",
-				"requestedDuration", duration, "maxDuration", maxDuration)
-			sudoRequest.Status.State = "Rejected"
-			sudoRequest.Status.ErrorMessage = fmt.Sprintf("Requested duration %s exceeds max allowed duration %s", duration, maxDuration)
-			r.Recorder.Event(&sudoRequest, "Warning", "Rejected",
-				fmt.Sprintf("SudoRequest from User %s was rejected: requested duration %s exceeds max allowed duration %s [UID: %s]",
-					sudoRequest.Annotations["tarbac.io/requester"], duration, maxDuration, sudoRequest.Status.RequestID))
-			r.Status().Update(ctx, &sudoRequest)
-			return ctrl.Result{}, nil
+		if duration > maxDuration {
+			return r.rejectRequest(ctx, &sudoRequest, fmt.Sprintf("Requested duration %s exceeds max allowed duration %s", duration, maxDuration), requestId)
 		}
-		logger.Info("SudoRequest duration validated against SudoPolicy", "requestedDuration", duration, "maxDuration", maxDuration)
 
-		// Check if the user is allowed
-		allowed := false
-		for _, user := range sudoPolicy.Spec.AllowedUsers {
-			if user.Name == requester {
-				allowed = true
-				logger.Info("User approved by policy", "user", requester, "policy", sudoPolicy.Name)
-				break
+		if !r.validateRequester(sudoPolicy, requester) {
+			return r.rejectRequest(ctx, &sudoRequest, "User not allowed by policy", requestId)
+		}
+
+		namespaces := []string{sudoRequest.Namespace}
+
+		r.Recorder.Event(&sudoRequest, "Normal", "Approved", fmt.Sprintf("User '%s' was approved by '%s' SudoPolicy [UID: %s]", requester, sudoPolicy.Name, requestId))
+		return r.createTemporaryRBACsForNamespaces(ctx, &sudoRequest, namespaces, &sudoPolicy, requester, logger, requestId)
+	}
+
+	// If the TemporaryRBAC is already created, fetch and update SudoRequest status
+	if sudoRequest.Status.State == "Approved" {
+
+		utils.LogInfoUID(logger, "SudoRequest is already approved, validating child resource", requestId)
+
+		for _, childResource := range sudoRequest.Status.ChildResource {
+
+			if childResource.Name == "" {
+				utils.LogErrorUID(logger, nil, "Child resource has incomplete data", requestId, "childResource", childResource)
+				continue
+			}
+
+			// Fetch child resource
+			switch childResource.Kind {
+			case "TemporaryRBAC":
+				var temporaryRBAC v1.TemporaryRBAC
+				err := r.Get(ctx, client.ObjectKey{Name: childResource.Name, Namespace: childResource.Namespace}, &temporaryRBAC)
+				if err != nil {
+					if apierrors.IsNotFound(err) {
+						utils.LogErrorUID(logger, err, "Child TemporaryRBAC resource not found", requestId, "child", childResource)
+						r.Recorder.Event(&sudoRequest, "Warning", "MissingChildResource", fmt.Sprintf("Child resource %s/%s not found", childResource.Namespace, childResource.Name))
+						continue
+					}
+					utils.LogErrorUID(logger, err, "Failed to fetch child resource", requestId, "child", childResource)
+					continue
+				}
+
+				if temporaryRBAC.Status.CreatedAt != nil && sudoRequest.Status.CreatedAt == nil {
+					sudoRequest.Status.CreatedAt = temporaryRBAC.Status.CreatedAt
+				}
+				if temporaryRBAC.Status.ExpiresAt != nil && sudoRequest.Status.ExpiresAt == nil {
+					sudoRequest.Status.ExpiresAt = temporaryRBAC.Status.ExpiresAt
+				}
+
+				// Check the state of the child resource
+				switch temporaryRBAC.Status.State {
+				case "Expired":
+					sudoRequest.Status.State = "Expired"
+					if err := r.Status().Update(ctx, &sudoRequest); err != nil {
+						return r.errorRequest(ctx, err, &sudoRequest, "Failed to update expired SudoRequest status", requestId)
+					}
+					r.Recorder.Event(&sudoRequest, "Warning", "Expired", fmt.Sprintf("SudoRequest Expired for User %s, revoked permissions for policy %s [UID: %s]", requester, sudoRequest.Spec.Policy, requestId))
+					utils.LogInfoUID(logger, "SudoRequest has expired", requestId, "name", sudoRequest.Name)
+					return ctrl.Result{}, nil
+				case "Error":
+					sudoRequest.Status.State = "Error"
+					if err := r.Status().Update(ctx, &sudoRequest); err != nil {
+						return r.errorRequest(ctx, err, &sudoRequest, "Failed to update expired SudoRequest status", requestId)
+					}
+					r.Recorder.Event(&sudoRequest, "Error", "Error", fmt.Sprintf("Error detected while processing SudoRequest for User '%s' and policy '%s' [UID: %s]", requester, sudoRequest.Spec.Policy, requestId))
+					utils.LogInfoUID(logger, "SudoRequest has errors", requestId, "name", sudoRequest.Name)
+					return ctrl.Result{}, nil
+				}
 			}
 		}
 
-		if !allowed {
-			logger.Info("SudoRequest rejected: User not allowed by policy",
-				"user", sudoRequest.Annotations["tarbac.io/requester"],
-				"policy", sudoRequest.Spec.Policy,
-				"requestID", sudoRequest.Status.RequestID)
-			sudoRequest.Status.State = "Rejected"
-			sudoRequest.Status.ErrorMessage = "User not allowed by policy"
-			r.Recorder.Event(&sudoRequest, "Warning", "Rejected",
-				fmt.Sprintf("SudoRequest from User %s was rejected: User not allowed by policy %s [UID: %s]",
-					sudoRequest.Annotations["tarbac.io/requester"], sudoRequest.Spec.Policy, sudoRequest.Status.RequestID))
-			r.Status().Update(ctx, &sudoRequest)
-			//             logger.Info("SudoRequest rejected", "user", requester, "policy", sudoPolicy.Name)
-			return ctrl.Result{}, nil
+		// Update the SudoRequest status
+		if err := r.Client.Status().Update(ctx, &sudoRequest); err != nil {
+			return r.errorRequest(ctx, err, &sudoRequest, "Failed to update SudoRequest status after child resource validation", requestId)
 		}
 
+		utils.LogInfoUID(logger, "ClusterSudoRequest status updated based on child resources", requestId, "state", sudoRequest.Status.State)
+	}
+	return ctrl.Result{}, nil
+}
+
+func (r *SudoRequestReconciler) validateRequester(policy v1.SudoPolicy, requester string) bool {
+	for _, user := range policy.Spec.AllowedUsers {
+		if user.Name == requester {
+			return true
+		}
+	}
+	return false
+}
+
+func (r *SudoRequestReconciler) rejectRequest(ctx context.Context, sudoRequest *v1.SudoRequest, message string, requestID string) (ctrl.Result, error) {
+
+	logger := log.FromContext(ctx)
+	utils.LogInfoUID(logger, "Rejecting SudoRequest", requestID, "errorMessage", message)
+	sudoRequest.Status.State = "Rejected"
+	sudoRequest.Status.ErrorMessage = message
+	if err := r.Status().Update(ctx, sudoRequest); err != nil {
+		utils.LogErrorUID(logger, err, "Failed to update SudoRequest status to Rejected", requestID)
+		return ctrl.Result{}, err
+	}
+	r.Recorder.Event(sudoRequest, "Warning", "Rejected", fmt.Sprintf("%s [UID: %s]", message, requestID))
+	return ctrl.Result{}, nil
+}
+
+func (r *SudoRequestReconciler) errorRequest(ctx context.Context, err error, sudoRequest *v1.SudoRequest, message string, requestID string) (ctrl.Result, error) {
+
+	logger := log.FromContext(ctx)
+	utils.LogErrorUID(logger, err, "SudoRequest Error", requestID, "errorMessage", message)
+	sudoRequest.Status.State = "Error"
+	sudoRequest.Status.ErrorMessage = message
+	if err := r.Status().Update(ctx, sudoRequest); err != nil {
+		utils.LogErrorUID(logger, err, "Failed to update SudoRequest status to Error", requestID)
+		return ctrl.Result{}, err
+	}
+	r.Recorder.Event(sudoRequest, "Error", "SudoRequestError", fmt.Sprintf("%s [UID: %s]", message, requestID))
+	return ctrl.Result{}, nil
+}
+
+func (r *SudoRequestReconciler) getRequestID(sudoRequest *v1.SudoRequest) string {
+	var requestId string
+	if sudoRequest.Status.RequestID != "" {
+		requestId = sudoRequest.Status.RequestID
+	} else {
+		requestId = string(sudoRequest.ObjectMeta.UID)
+	}
+	return requestId
+}
+
+func (r *SudoRequestReconciler) createTemporaryRBACsForNamespaces(ctx context.Context, sudoRequest *v1.SudoRequest, namespaces []string, sudoPolicy *v1.SudoPolicy, requester string, logger logr.Logger, requestId string) (ctrl.Result, error) {
+	var childResources []v1.ChildResource
+
+	for _, namespace := range namespaces {
 		temporaryRBAC := &v1.TemporaryRBAC{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      utils.GenerateTempRBACName(rbacv1.Subject{Kind: "User", Name: requester}, sudoRequest.Spec.Policy, sudoRequest.Status.RequestID), // fmt.Sprintf("temporaryrbac-%s", sudoRequest.Name),
-				Namespace: sudoRequest.Namespace,
+				Name:      utils.GenerateTempRBACName(rbacv1.Subject{Kind: "User", Name: requester}, sudoRequest.Spec.Policy, sudoRequest.Status.RequestID),
+				Namespace: namespace,
 			},
 			Spec: v1.TemporaryRBACSpec{
 				Subjects: []rbacv1.Subject{
@@ -263,48 +242,40 @@ func (r *SudoRequestReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 						Name: requester,
 					},
 				},
-				RoleRef: rbacv1.RoleRef{
-					APIGroup: sudoPolicy.Spec.RoleRef.APIGroup,
-					Kind:     sudoPolicy.Spec.RoleRef.Kind,
-					Name:     sudoPolicy.Spec.RoleRef.Name,
-				},
+				RoleRef:  sudoPolicy.Spec.RoleRef,
 				Duration: sudoRequest.Spec.Duration,
 			},
 		}
 
-		if err := controllerutil.SetControllerReference(&sudoRequest, temporaryRBAC, r.Scheme); err != nil {
-			logger.Error(err, "Failed to set OwnerReference on TemporaryRBAC")
-			return ctrl.Result{}, err
+		if err := controllerutil.SetControllerReference(sudoRequest, temporaryRBAC, r.Scheme); err != nil {
+			utils.LogErrorUID(logger, err, "Failed to set OwnerReference on TemporaryRBAC", requestId)
+			continue
 		}
 
-		if err := r.Create(ctx, temporaryRBAC); err != nil {
-			logger.Error(err, "Failed to create TemporaryRBAC")
-			sudoRequest.Status.State = "Error"
-			sudoRequest.Status.ErrorMessage = "Failed to create TemporaryRBAC"
-			r.Status().Update(ctx, &sudoRequest)
-			return ctrl.Result{}, err
+		if err := r.Client.Create(ctx, temporaryRBAC); err != nil {
+			utils.LogErrorUID(logger, err, "Failed to create TemporaryRBAC", requestId)
+			continue
 		}
 
-		// Update the SudoRequest status to Approved
-		sudoRequest.Status.State = "Approved"
-		if temporaryRBAC.Status.CreatedAt != nil && sudoRequest.Status.CreatedAt == nil {
-			sudoRequest.Status.CreatedAt = temporaryRBAC.Status.CreatedAt
-		}
-		if temporaryRBAC.Status.ExpiresAt != nil && sudoRequest.Status.ExpiresAt == nil {
-			sudoRequest.Status.ExpiresAt = temporaryRBAC.Status.ExpiresAt
-		}
+		utils.LogInfoUID(logger, "TemporaryRBAC created successfully", requestId, "temporaryRBAC", temporaryRBAC.Name, "namespace", temporaryRBAC.Namespace)
 
-		if err := r.Status().Update(ctx, &sudoRequest); err != nil {
-			logger.Error(err, "Failed to update SudoRequest status to Approved")
-			return ctrl.Result{}, err
-		}
-
-		r.Recorder.Event(&sudoRequest, "Normal", "Approved", fmt.Sprintf("TemporaryRBAC created for User: %s using %s SudoPolicy [UID: %s]", sudoRequest.Annotations["tarbac.io/requester"], sudoRequest.Spec.Policy, sudoRequest.Status.RequestID))
-		logger.Info("TemporaryRBAC created and SudoRequest status updated to Approved", "TemporaryRBAC", temporaryRBAC.Name)
-		return ctrl.Result{RequeueAfter: time.Second * 5}, nil
+		childResources = append(childResources, v1.ChildResource{
+			APIVersion: "tarbac.io/v1",
+			Kind:       "TemporaryRBAC",
+			Name:       temporaryRBAC.Name,
+			Namespace:  namespace,
+		})
 	}
 
-	return ctrl.Result{}, nil
+	sudoRequest.Status.State = "Approved"
+	sudoRequest.Status.ChildResource = childResources
+
+	if err := r.Status().Update(ctx, sudoRequest); err != nil {
+		utils.LogErrorUID(logger, err, "Failed to update SudoRequest status with TemporaryRBAC details", requestId)
+		return ctrl.Result{}, err
+	}
+	utils.LogInfoUID(logger, "Successfully updated SudoRequest status with TemporaryRBAC details, requeuing while waiting for child resource creation", requestId)
+	return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
