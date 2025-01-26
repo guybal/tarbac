@@ -62,6 +62,9 @@ spec:
                 state:
                   type: string
                   description: The current state of the SudoPolicy.
+                errorMessage:
+                  type: string
+                  description: Useful error message.
       additionalPrinterColumns:
         - name: Max Duration
           type: string
