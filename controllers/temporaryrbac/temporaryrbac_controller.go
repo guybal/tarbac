@@ -70,7 +70,6 @@ func (r *TemporaryRBACReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	duration, err := time.ParseDuration(tempRBAC.Spec.Duration)
 	if err != nil {
 		utils.LogErrorUID(logger, err, "Invalid duration in TemporaryRBAC spec", requestId, "duration", tempRBAC.Spec.Duration)
-
 		return ctrl.Result{}, err
 	}
 

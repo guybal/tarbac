@@ -8,7 +8,6 @@ import (
 	"github.com/go-logr/logr"
 	v1 "github.com/guybal/tarbac/api/v1"
 	utils "github.com/guybal/tarbac/utils"
-	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -101,7 +100,7 @@ func (r *ClusterSudoRequestReconciler) Reconcile(ctx context.Context, req ctrl.R
 			return r.rejectRequest(ctx, &clusterSudoRequest, "User not allowed by policy", logger, requestId)
 		}
 
-		namespaces, err := r.getAllowedNamespaces(ctx, &clusterSudoPolicy)
+		namespaces, err := r.getAllowedNamespaces(&clusterSudoPolicy)
 		if err != nil {
 			utils.LogErrorUID(logger, err, "Failed to retrieve allowed namespaces", requestId)
 			return ctrl.Result{}, err
@@ -251,20 +250,8 @@ func (r *ClusterSudoRequestReconciler) Reconcile(ctx context.Context, req ctrl.R
 	return ctrl.Result{}, nil
 }
 
-func (r *ClusterSudoRequestReconciler) getAllowedNamespaces(ctx context.Context, clusterSudoPolicy *v1.ClusterSudoPolicy) ([]string, error) {
-	if clusterSudoPolicy.Spec.AllowedNamespacesSelector != nil {
-		var namespaces corev1.NamespaceList
-		if err := r.List(ctx, &namespaces, client.MatchingLabels(clusterSudoPolicy.Spec.AllowedNamespacesSelector.MatchLabels)); err != nil {
-			return nil, err
-		}
-		var namespaceNames []string
-		for _, ns := range namespaces.Items {
-			namespaceNames = append(namespaceNames, ns.Name)
-		}
-		return namespaceNames, nil
-	}
-
-	return clusterSudoPolicy.Spec.AllowedNamespaces, nil
+func (r *ClusterSudoRequestReconciler) getAllowedNamespaces(clusterSudoPolicy *v1.ClusterSudoPolicy) ([]string, error) {
+	return clusterSudoPolicy.Status.Namespaces, nil
 }
 
 func (r *ClusterSudoRequestReconciler) createTemporaryRBACsForNamespaces(ctx context.Context, clusterSudoRequest *v1.ClusterSudoRequest, namespaces []string, clusterSudoPolicy *v1.ClusterSudoPolicy, requester string, logger logr.Logger, requestId string) (ctrl.Result, error) {
