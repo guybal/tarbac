@@ -201,9 +201,11 @@ func (r *ClusterTemporaryRBACReconciler) ensureBindings(ctx context.Context, clu
 		return err
 	}
 
-	r.Recorder.Event(clusterTempRBAC, "Normal", "PermissionsGranted", fmt.Sprintf("Temporary permissions were granted in cluster scope [UID: %s]", requestId))
-	logger.Info("Successfully ensured bindings and updated status", "ClusterTemporaryRBAC", clusterTempRBAC.Name)
-
+	// r.Recorder.Event(clusterTempRBAC, "Normal", "PermissionsGranted", fmt.Sprintf("Temporary permissions were granted in cluster scope [UID: %s]", requestId))
+	eventMessage := utils.FormatEventMessage(fmt.Sprintf("Temporary permissions were granted in cluster scope"), requestId)
+	r.Recorder.Event(clusterTempRBAC, "Normal", "PermissionsGranted", eventMessage)
+	// logger.Info("Successfully ensured bindings and updated status", "ClusterTemporaryRBAC", clusterTempRBAC.Name)
+	utils.LogInfoUID(logger, "Successfully ensured bindings and updated status", requestId, "kind", clusterTempRBAC.Kind, "name", clusterTempRBAC.Name, "state", clusterTempRBAC.Status.State)
 	return nil
 }
 
@@ -227,7 +229,9 @@ func (r *ClusterTemporaryRBACReconciler) cleanupBindings(ctx context.Context, cl
 				continue
 			}
 			utils.LogInfoUID(logger, "Successfully deleted RoleBinding", requestId, "kind", child.Kind, "name", child.Name, "namespace", child.Namespace)
-			r.Recorder.Event(clusterTempRBAC, "Normal", "PermissionsRevoked", fmt.Sprintf("Temporary permissions were revoked in cluster scope [UID: %s]", requestId))
+			// r.Recorder.Event(clusterTempRBAC, "Normal", "PermissionsRevoked", fmt.Sprintf("Temporary permissions were revoked in cluster scope [UID: %s]", requestId))
+			eventMessage := utils.FormatEventMessage(fmt.Sprintf("Temporary permissions were revoked in cluster scope"), requestId)
+			r.Recorder.Event(clusterTempRBAC, "Normal", "PermissionsRevoked", eventMessage)
 		} else {
 			utils.LogErrorUID(logger, nil, "Unsupported child resource kind", requestId, "kind", child.Kind)
 			remainingChildResources = append(remainingChildResources, child)

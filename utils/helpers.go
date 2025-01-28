@@ -72,3 +72,11 @@ func LogError(logger logr.Logger, err error, message string, additionalFields ..
 		message,
 		additionalFields...)
 }
+
+// FormatEventMessage formats an event message with the requestId if applicable.
+func FormatEventMessage(message, requestId string) string {
+	if requestId != "" {
+		return fmt.Sprintf("%s [RequestID: %s]", message, requestId)
+	}
+	return message
+}

@@ -103,7 +103,10 @@ func (r *ClusterSudoPolicyReconciler) errorRequest(ctx context.Context, err erro
 		utils.LogError(logger, err, "Failed to update ClusterSudoPolicy status to Error")
 		return ctrl.Result{}, err
 	}
-	r.Recorder.Event(clusterSudoPolicy, "Error", "ClusterSudoPolicyError", message)
+	// r.Recorder.Event(clusterSudoPolicy, "Error", "ClusterSudoPolicyError", message)
+	eventMessage := fmt.Sprintf("ClusterSudoPolicyError in policy '%s': %s", clusterSudoPolicy.Name, message)
+	r.Recorder.Event(clusterSudoPolicy, "Error", "ClusterSudoPolicyError", eventMessage)
+
 	return ctrl.Result{}, nil
 }
 

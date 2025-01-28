@@ -69,7 +69,9 @@ func (r *ClusterSudoRequestReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 	// Initial State
 	if clusterSudoRequest.Status.State == "" {
-		r.Recorder.Event(&clusterSudoRequest, "Normal", "Submitted", fmt.Sprintf("User %s submitted a ClusterSudoRequest for policy %s for a duration of %s [UID: %s]", clusterSudoRequest.Annotations["tarbac.io/requester"], clusterSudoRequest.Spec.Policy, duration, requestId))
+		eventMessage := utils.FormatEventMessage(fmt.Sprintf("User '%s' submitted a ClusterSudoRequest for policy '%s' for a duration of %s", requester, clusterSudoPolicy.Name, duration), requestId)
+		r.Recorder.Event(&clusterSudoRequest, "Normal", "Submitted", eventMessage)
+		// r.Recorder.Event(&clusterSudoRequest, "Normal", "Submitted", fmt.Sprintf("User %s submitted a ClusterSudoRequest for policy %s for a duration of %s [UID: %s]", requester, clusterSudoRequest.Spec.Policy, duration, requestId))
 		clusterSudoRequest.Status.State = "Pending"
 		clusterSudoRequest.Status.RequestID = requestId
 		if err := r.Client.Status().Update(ctx, &clusterSudoRequest); err != nil {
@@ -114,11 +116,15 @@ func (r *ClusterSudoRequestReconciler) Reconcile(ctx context.Context, req ctrl.R
 			return r.rejectRequest(ctx, &clusterSudoRequest, "No namespaces matched policy constraints", logger, requestId)
 		}
 		if len(namespaces) == 1 && namespaces[0] == "*" {
-			r.Recorder.Event(&clusterSudoRequest, "Normal", "Approved", fmt.Sprintf("User '%s' was approved by '%s' ClusterSudoPolicy [UID: %s]", requester, clusterSudoPolicy.Name, requestId))
+			eventMessage := utils.FormatEventMessage(fmt.Sprintf("User '%s' was approved by '%s' ClusterSudoPolicy", requester, clusterSudoPolicy.Name), requestId)
+			r.Recorder.Event(&clusterSudoRequest, "Normal", "Approved", eventMessage)
+			// r.Recorder.Event(&clusterSudoRequest, "Normal", "Approved", fmt.Sprintf("User '%s' was approved by '%s' ClusterSudoPolicy [UID: %s]", requester, clusterSudoPolicy.Name, requestId))
 			return r.createClusterTemporaryRBAC(ctx, &clusterSudoRequest, &clusterSudoPolicy, logger, requestId)
 		}
 		if len(namespaces) >= 1 {
-			r.Recorder.Event(&clusterSudoRequest, "Normal", "Approved", fmt.Sprintf("User '%s' was approved by '%s' ClusterSudoPolicy [UID: %s]", requester, clusterSudoPolicy.Name, requestId))
+			eventMessage := utils.FormatEventMessage(fmt.Sprintf("User '%s' was approved by '%s' ClusterSudoPolicy", requester, clusterSudoPolicy.Name), requestId)
+			r.Recorder.Event(&clusterSudoRequest, "Normal", "Approved", eventMessage)
+			// r.Recorder.Event(&clusterSudoRequest, "Normal", "Approved", fmt.Sprintf("User '%s' was approved by '%s' ClusterSudoPolicy [UID: %s]", requester, clusterSudoPolicy.Name, requestId))
 			return r.createTemporaryRBACsForNamespaces(ctx, &clusterSudoRequest, namespaces, &clusterSudoPolicy, requester, logger, requestId)
 		}
 	}
@@ -142,7 +148,10 @@ func (r *ClusterSudoRequestReconciler) Reconcile(ctx context.Context, req ctrl.R
 				if err != nil {
 					if apierrors.IsNotFound(err) {
 						utils.LogErrorUID(logger, err, "Child TemporaryRBAC resource not found", requestId, "child", childResource)
-						r.Recorder.Event(&clusterSudoRequest, "Warning", "MissingChildResource", fmt.Sprintf("Child resource %s/%s not found", childResource.Namespace, childResource.Name))
+
+						eventMessage := utils.FormatEventMessage(fmt.Sprintf("Child resource %s/%s not found in namespace %s", childResource.Kind, childResource.Name, childResource.Namespace), requestId)
+						r.Recorder.Event(&clusterSudoRequest, "Warning", "MissingChildResource", eventMessage)
+						// r.Recorder.Event(&clusterSudoRequest, "Warning", "MissingChildResource", fmt.Sprintf("Child resource %s/%s not found", childResource.Namespace, childResource.Name))
 						continue
 					}
 					utils.LogErrorUID(logger, err, "Failed to fetch child resource", requestId, "child", childResource)
@@ -164,7 +173,11 @@ func (r *ClusterSudoRequestReconciler) Reconcile(ctx context.Context, req ctrl.R
 						utils.LogErrorUID(logger, err, "Failed to update expired ClusterSudoRequest status", requestId)
 						return ctrl.Result{}, err
 					}
-					r.Recorder.Event(&clusterSudoRequest, "Warning", "Expired", fmt.Sprintf("ClusterSudoRequest Expired for User %s, revoked permissions for policy %s [UID: %s]", clusterSudoRequest.Annotations["tarbac.io/requester"], clusterSudoRequest.Spec.Policy, clusterSudoRequest.Status.RequestID))
+					// r.Recorder.Event(&clusterSudoRequest, "Warning", "Expired", fmt.Sprintf("ClusterSudoRequest Expired for User %s, revoked permissions for policy %s [UID: %s]", clusterSudoRequest.Annotations["tarbac.io/requester"], clusterSudoRequest.Spec.Policy, clusterSudoRequest.Status.RequestID))
+
+					eventMessage := utils.FormatEventMessage(fmt.Sprintf("ClusterSudoRequest Expired for User '%s', revoked permissions for policy '%s'", requester, clusterSudoRequest.Spec.Policy), requestId)
+					r.Recorder.Event(&clusterSudoRequest, "Warning", "MissingChildResource", eventMessage)
+
 					utils.LogInfoUID(logger, "ClusterSudoRequest has expired", requestId, "name", clusterSudoRequest.Name)
 					return ctrl.Result{}, nil
 				case "Error":
@@ -173,7 +186,10 @@ func (r *ClusterSudoRequestReconciler) Reconcile(ctx context.Context, req ctrl.R
 						utils.LogErrorUID(logger, err, "Failed to update expired ClusterSudoRequest status", requestId)
 						return ctrl.Result{}, err
 					}
-					r.Recorder.Event(&clusterSudoRequest, "Error", "Error", fmt.Sprintf("Error detected while processing ClusterSudoRequest for User '%s' and policy '%s' [UID: %s]", clusterSudoRequest.Annotations["tarbac.io/requester"], clusterSudoRequest.Spec.Policy, clusterSudoRequest.Status.RequestID))
+					// r.Recorder.Event(&clusterSudoRequest, "Error", "Error", fmt.Sprintf("Error detected while processing ClusterSudoRequest for User '%s' and policy '%s' [UID: %s]", clusterSudoRequest.Annotations["tarbac.io/requester"], clusterSudoRequest.Spec.Policy, clusterSudoRequest.Status.RequestID))
+					eventMessage := utils.FormatEventMessage(fmt.Sprintf("Error detected while processing ClusterSudoRequest for User '%s' and policy '%s'", requester, clusterSudoRequest.Spec.Policy), requestId)
+					r.Recorder.Event(&clusterSudoRequest, "Error", "Error", eventMessage)
+
 					utils.LogInfoUID(logger, "ClusterSudoRequest has errors", requestId, "name", clusterSudoRequest.Name)
 					return ctrl.Result{}, nil
 				}
@@ -183,8 +199,10 @@ func (r *ClusterSudoRequestReconciler) Reconcile(ctx context.Context, req ctrl.R
 				if err != nil {
 					if apierrors.IsNotFound(err) {
 						utils.LogErrorUID(logger, err, "Child ClusterTemporaryRBAC resource not found", requestId, "child", childResource)
-						r.Recorder.Event(&clusterSudoRequest, "Warning", "MissingChildResource",
-							fmt.Sprintf("Child ClusterTemporaryRBAC resource %s not found", childResource.Name))
+						// r.Recorder.Event(&clusterSudoRequest, "Warning", "MissingChildResource", fmt.Sprintf("Child ClusterTemporaryRBAC resource %s not found", childResource.Name))
+
+						eventMessage := utils.FormatEventMessage(fmt.Sprintf("Child ClusterTemporaryRBAC resource %s not found", childResource.Name), requestId)
+						r.Recorder.Event(&clusterSudoRequest, "Warning", "MissingChildResource", eventMessage)
 						continue
 					}
 					utils.LogErrorUID(logger, err, "Failed to fetch child ClusterTemporaryRBAC resource", requestId, "child", childResource)
@@ -206,7 +224,11 @@ func (r *ClusterSudoRequestReconciler) Reconcile(ctx context.Context, req ctrl.R
 						utils.LogErrorUID(logger, err, "Failed to update expired ClusterSudoRequest status", requestId)
 						return ctrl.Result{}, err
 					}
-					r.Recorder.Event(&clusterSudoRequest, "Warning", "Expired", fmt.Sprintf("ClusterSudoRequest Expired for User %s, revoked permissions for policy %s [UID: %s]", requester, clusterSudoRequest.Spec.Policy, requestId))
+					// r.Recorder.Event(&clusterSudoRequest, "Warning", "Expired", fmt.Sprintf("ClusterSudoRequest Expired for User %s, revoked permissions for policy %s [UID: %s]", requester, clusterSudoRequest.Spec.Policy, requestId))
+
+					eventMessage := utils.FormatEventMessage(fmt.Sprintf("ClusterSudoRequest Expired for User '%s', revoked permissions for policy '%s'", requester, clusterSudoRequest.Spec.Policy), requestId)
+					r.Recorder.Event(&clusterSudoRequest, "Warning", "Expired", eventMessage)
+
 					utils.LogInfoUID(logger, "ClusterSudoRequest has expired", requestId, "name", clusterSudoRequest.Name)
 					return ctrl.Result{}, nil
 				case "Error":
@@ -216,7 +238,11 @@ func (r *ClusterSudoRequestReconciler) Reconcile(ctx context.Context, req ctrl.R
 						utils.LogErrorUID(logger, err, "Failed to update error ClusterSudoRequest status", requestId)
 						return ctrl.Result{}, err
 					}
-					r.Recorder.Event(&clusterSudoRequest, "Error", "Error", fmt.Sprintf("Error detected while processing ClusterSudoRequest for User '%s' and policy '%s' [UID: %s]", requester, clusterSudoRequest.Spec.Policy, requestId))
+					// r.Recorder.Event(&clusterSudoRequest, "Error", "Error", fmt.Sprintf("Error detected while processing ClusterSudoRequest for User '%s' and policy '%s' [UID: %s]", requester, clusterSudoRequest.Spec.Policy, requestId))
+
+					eventMessage := utils.FormatEventMessage(fmt.Sprintf("Error detected while processing ClusterSudoRequest for User '%s' and policy '%s'", requester, clusterSudoRequest.Spec.Policy), requestId)
+					r.Recorder.Event(&clusterSudoRequest, "Error", "Error", eventMessage)
+
 					utils.LogInfoUID(logger, "ClusterSudoRequest has errors", requestId, "name", clusterSudoRequest.Name)
 					return ctrl.Result{}, nil
 				}
@@ -244,7 +270,11 @@ func (r *ClusterSudoRequestReconciler) Reconcile(ctx context.Context, req ctrl.R
 			utils.LogErrorUID(logger, err, "Failed to update ClusterSudoRequest status to Expired", requestId)
 			return ctrl.Result{}, err
 		}
-		r.Recorder.Event(&clusterSudoRequest, "Warning", "Expired", fmt.Sprintf("ClusterSudoRequest of user '%s' for policy '%s' expired [UID: %s]", requester, clusterSudoPolicy.Name, clusterSudoRequest.Status.RequestID))
+
+		eventMessage := utils.FormatEventMessage(fmt.Sprintf("ClusterSudoRequest of User '%s' for policy '%s' expired", requester, clusterSudoPolicy.Name), requestId)
+		r.Recorder.Event(&clusterSudoRequest, "Warning", "Expired", eventMessage)
+
+		// r.Recorder.Event(&clusterSudoRequest, "Warning", "Expired", fmt.Sprintf("ClusterSudoRequest of user '%s' for policy '%s' expired [UID: %s]", requester, clusterSudoPolicy.Name, clusterSudoRequest.Status.RequestID))
 	}
 	utils.LogInfoUID(logger, "No expiration time set; skipping requeue", requestId)
 	return ctrl.Result{}, nil
@@ -373,7 +403,9 @@ func (r *ClusterSudoRequestReconciler) errorRequest(ctx context.Context, err err
 		utils.LogErrorUID(logger, err, "Failed to update ClusterSudoRequest status to Error", requestID)
 		return ctrl.Result{}, err
 	}
-	r.Recorder.Event(clusterSudoRequest, "Error", "ClusterSudoRequestError", fmt.Sprintf("%s [UID: %s]", message, requestID))
+	// r.Recorder.Event(clusterSudoRequest, "Error", "ClusterSudoRequestError", fmt.Sprintf("%s [UID: %s]", message, requestID))
+	eventMessage := utils.FormatEventMessage(message, requestID)
+	r.Recorder.Event(clusterSudoRequest, "Error", "ClusterSudoRequestError", eventMessage)
 	return ctrl.Result{}, nil
 }
 
@@ -386,7 +418,9 @@ func (r *ClusterSudoRequestReconciler) rejectRequest(ctx context.Context, cluste
 		utils.LogErrorUID(logger, err, "Failed to update ClusterSudoRequest status to Rejected", requestID)
 		return ctrl.Result{}, err
 	}
-	r.Recorder.Event(clusterSudoRequest, "Warning", "Rejected", message)
+	// r.Recorder.Event(clusterSudoRequest, "Warning", "Rejected", message)
+	eventMessage := utils.FormatEventMessage(message, requestID)
+	r.Recorder.Event(clusterSudoRequest, "Warning", "Rejected", eventMessage)
 	return ctrl.Result{}, nil
 }
 

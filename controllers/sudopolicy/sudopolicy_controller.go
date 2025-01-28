@@ -23,38 +23,30 @@ type SudoPolicyReconciler struct {
 func (r *SudoPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
-	// logger.Info("Reconciling SudoPolicy", "name", req.Name, "namespace", req.Namespace)
 	utils.LogInfo(logger, "Reconciling SudoPolicy", "name", req.Name)
 
 	// Fetch the SudoPolicy object
 	var sudoPolicy v1.SudoPolicy
 	if err := r.Get(ctx, req.NamespacedName, &sudoPolicy); err != nil {
 		if apierrors.IsNotFound(err) {
-			// logger.Info("SudoPolicy resource not found. Ignoring since it must have been deleted.")
 			utils.LogInfo(logger, "SudoPolicy resource not found. Ignoring since it must have been deleted.", "name", req.Name, "namespace", req.Namespace)
 			return ctrl.Result{}, nil
 		}
-		// logger.Error(err, "Unable to fetch SudoPolicy")
 		utils.LogError(logger, err, "Unable to fetch SudoPolicy", "name", req.Name, "namespace", req.Namespace)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	// Validate maxDuration
 	if _, err := time.ParseDuration(sudoPolicy.Spec.MaxDuration); err != nil {
-		// logger.Error(err, "Invalid maxDuration in SudoPolicy spec", "maxDuration", sudoPolicy.Spec.MaxDuration)
-		// return ctrl.Result{}, err
 		return r.errorRequest(ctx, err, &sudoPolicy, fmt.Sprintf("Invalid MaxDuration in SudoPolicy spec: %s", sudoPolicy.Spec.MaxDuration))
 	}
 
 	// Update SudoPolicy status
 	sudoPolicy.Status.State = "Active"
 	if err := r.Status().Update(ctx, &sudoPolicy); err != nil {
-		// logger.Error(err, "Failed to update SudoPolicy status")
-		// return ctrl.Result{}, err
 		return r.errorRequest(ctx, err, &sudoPolicy, "Failed to update SudoPolicy status")
 	}
 
-	// logger.Info("Successfully validated SudoPolicy", "name", sudoPolicy.Name)
 	utils.LogInfo(logger, "Successfully validated SudoPolicy", "name", sudoPolicy.Name, "kind", sudoPolicy.Kind, "namespace", sudoPolicy.Namespace)
 	return ctrl.Result{}, nil
 }
@@ -69,7 +61,9 @@ func (r *SudoPolicyReconciler) errorRequest(ctx context.Context, err error, sudo
 		utils.LogError(logger, err, "Failed to update SudoPolicy status to Error")
 		return ctrl.Result{}, err
 	}
-	r.Recorder.Event(sudoPolicy, "Error", "SudoPolicyError", message)
+	// r.Recorder.Event(sudoPolicy, "Error", "SudoPolicyError", message)
+	eventMessage := fmt.Sprintf("SudoPolicyError in policy '%s': %s", sudoPolicy.Name, message)
+	r.Recorder.Event(sudoPolicy, "Error", "SudoPolicyError", eventMessage)
 	return ctrl.Result{}, nil
 }
 
