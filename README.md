@@ -1,11 +1,23 @@
 # Time and Role Based Access Controller
 
 - [Time and Role Based Access Controller](#time-and-role-based-access-controller)
+  - [Design Overview](#design-overview)
   - [Install using Helm](#install-using-helm)
     - [Create a Registry Secret](#create-a-registry-secret)
     - [Prepare `tarbac-values.yaml` File](#prepare-tarbac-valuesyaml-file)
     - [Install](#install)
   - [Getting Started with TARBAC](#getting-started-with-tarbac)
+
+**Time and Role-Based Access Controller (TARBAC)** provides a Kubernetes-native solution to manage temporary RBAC permissions dynamically. It ensures secure, time-limited access by leveraging a self-service, policy-driven approach. Developers request what they need, policies validate the request, and temporary access is granted (and revoked) automatically.
+
+## Design Overview
+
+TARBAC is designed to provide dynamic, temporary RBAC permissions in Kubernetes. It leverages Custom Resource Definitions (CRDs) and controllers to manage policies and requests for temporary access. The system ensures secure, time-limited access by validating requests against predefined policies and automatically revoking permissions after their expiration.
+
+For a detailed design document, please refer to:
+[**TARBAC High-Level Design**](./docs/design.md)
+
+---
 
 ## Install using Helm
 
