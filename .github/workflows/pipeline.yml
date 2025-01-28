@@ -79,16 +79,23 @@ jobs:
           
           # Update Chart.yaml
           sed -i "s|^appVersion: \".*\"|appVersion: \"${new_version}\"|g" $HELM_CHART_SUBPATH/Chart.yaml   
-       
-          - name: Package Helm Chart
-          run: |
-            helm package ${HELM_CHART_SUBPATH} --destination ./
+          
+      - name: Package Helm Chart
+        run: |
+          helm package ${HELM_CHART_SUBPATH} --destination ./
   
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          
       - name: Push Helm Chart as OCI Image
         run: |
-          helm registry login docker.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
+          helm registry login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
           helm chart save ./${HELM_CHART_SUBPATH}-${{ env.new_version }}.tgz ${HELM_IMAGE}:${{ env.new_version }}
-          helm chart push ${HELM_IMAGE}:${{ env.new_version }}
+          helm chart push ${HELM_IMAGE}:${{ env.new_version }}  
 
       - name: Commit Version Changes
         env:
