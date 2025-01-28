@@ -86,7 +86,7 @@ jobs:
   
       - name: Push Helm Chart as OCI Image
         run: |
-          helm registry login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
+          helm registry login docker.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
           helm chart save ./${HELM_CHART_SUBPATH}-${{ env.new_version }}.tgz ${HELM_IMAGE}:${{ env.new_version }}
           helm chart push ${HELM_IMAGE}:${{ env.new_version }}
 
