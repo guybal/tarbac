@@ -1,7 +1,7 @@
 replicaCount: 1
 
 image:
-  repository: docker.io/guybalmas/temporary-rbac-controller
+  repository: ghcr.io/guybalmas/temporary-rbac-controller
   tag: v1.1.13
   pullPolicy: IfNotPresent
   pullSecret:

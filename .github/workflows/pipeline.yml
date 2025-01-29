@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      DOCKER_IMAGE: docker.io/guybalmas/temporary-rbac-controller
+      DOCKER_IMAGE: ghcr.io/guybalmas/temporary-rbac-controller
       HELM_IMAGE: ghcr.io/guybalmas/tarbac
       VERSION_FILE: VERSION
       HELM_CHART_SUBPATH: config/helm
@@ -90,7 +90,7 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-          
+
       - name: Push Helm Chart as OCI Image
         run: |
           helm registry login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
