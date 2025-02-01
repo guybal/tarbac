@@ -9,6 +9,12 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+  
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
 
     env:
       DOCKER_IMAGE: ghcr.io/guybalmas/temporary-rbac-controller
