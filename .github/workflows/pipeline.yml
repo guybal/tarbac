@@ -90,7 +90,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.GHCR_PAT }}
 
       - name: Push Helm Chart as OCI Image
         run: |
@@ -101,7 +101,7 @@ jobs:
 
       # - name: Commit Version Changes
       #   env:
-      #     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #     GH_TOKEN: ${{ secrets.GHCR_PAT }}
       #   run: |
       #     git config user.name "GitHub Actions"
       #     git config user.email "actions@github.com"
