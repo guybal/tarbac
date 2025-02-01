@@ -17,8 +17,8 @@ jobs:
       id-token: write
 
     env:
-      DOCKER_IMAGE: ghcr.io/guybalmas/temporary-rbac-controller
-      HELM_IMAGE: ghcr.io/guybal
+      DOCKER_IMAGE: ghcr.io/guybal/tarbac-controller
+      HELM_IMAGE: ghcr.io/guybal/tarbac
       VERSION_FILE: VERSION
       HELM_CHART_SUBPATH: config/helm
 
@@ -96,9 +96,8 @@ jobs:
         run: |
           mkdir -p temp-helm-oci
           helm package ${HELM_CHART_SUBPATH} --destination ./temp-helm-oci
-          CHART_PACKAGE=$(ls ./temp-helm-oci/*.tgz)
-
           echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u ${{ github.actor }} --password-stdin
+          CHART_PACKAGE=$(ls ./temp-helm-oci/*.tgz)
           helm push ${CHART_PACKAGE} oci://${HELM_IMAGE} 
 
       # - name: Commit Version Changes

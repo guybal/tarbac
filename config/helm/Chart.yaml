@@ -1,6 +1,6 @@
 apiVersion: v2
-name: temporary-rbac-controller
-description: A Helm chart for deploying the Temporary RBAC Controller
+name: tarbac
+description: A Helm chart for deploying TARBAC Controller, a comprehensive Time, Attribute, and Role-Based Access Controller for Kubernetes. This chart facilitates the management of temporary elevated permissions and fine-grained access control policies.
 type: application
 version: 1.1.1
 appVersion: "v1.1.13"

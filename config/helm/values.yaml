@@ -1,7 +1,7 @@
 replicaCount: 1
 
 image:
-  repository: ghcr.io/guybalmas/temporary-rbac-controller
+  repository: ghcr.io/guybal/tarbac-controller
   tag: v1.1.13
   pullPolicy: IfNotPresent
   pullSecret:
@@ -47,4 +47,4 @@ rbac:
   create: true
 
 serviceAccount:
-  name: temporary-rbac-controller-sa
+  name: tarbac-controller-sa
