@@ -38,7 +38,7 @@ jobs:
             echo "current_version=v1.0.0" >> $GITHUB_ENV
           fi
 
-          current_version="${{ env.current_version }}"
+          # current_version="${{ env.current_version }}"
 
           if [[ "$current_version" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
             major="${BASH_REMATCH[1]}"
@@ -51,7 +51,7 @@ jobs:
             exit 1
           fi
 
-          echo "${{ env.new_version }}" > $VERSION_FILE
+          echo "${new_version}" > $VERSION_FILE
 
       - name: Generate Code
         run: |
