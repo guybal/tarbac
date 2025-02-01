@@ -21,6 +21,7 @@ jobs:
       HELM_IMAGE: ghcr.io/guybal/tarbac
       VERSION_FILE: VERSION
       HELM_CHART_SUBPATH: config/helm
+      current_branch: feature/helm-oci
 
     steps:
       - name: Checkout Code
@@ -33,13 +34,15 @@ jobs:
         id: bump-version
         run: |
 
+          current_version=""
+
           if [ -f "$VERSION_FILE" ]; then
-            echo "current_version=$(cat $VERSION_FILE)" >> $GITHUB_ENV
+            current_version=$(cat $VERSION_FILE)
           else
-            echo "current_version=v1.0.0" >> $GITHUB_ENV
+            current_version=v1.0.0
           fi
 
-          current_version=$(cat $VERSION_FILE)
+          echo "current_version=$current_version" >> $GITHUB_ENV
 
           if [[ "$current_version" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
             major="${BASH_REMATCH[1]}"
@@ -107,4 +110,4 @@ jobs:
           git add config/helm/templates/crd
           git commit -m "Update to version ${{ env.new_version }}"
           git tag -a ${{ env.new_version }} -m "${{ env.new_version }}" 
-          git push --follow-tags origin main
+          git push --follow-tags origin ${{ env.current_branch }}
