@@ -12,7 +12,7 @@ jobs:
 
     env:
       DOCKER_IMAGE: ghcr.io/guybalmas/temporary-rbac-controller
-      HELM_IMAGE: ghcr.io/guybalmas/tarbac
+      HELM_IMAGE: ghcr.io/guybalmas/temporary-rbac-controller
       VERSION_FILE: VERSION
       HELM_CHART_SUBPATH: config/helm
 
