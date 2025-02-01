@@ -15,6 +15,7 @@ jobs:
       HELM_IMAGE: ghcr.io/guybalmas/tarbac
       VERSION_FILE: VERSION
       HELM_CHART_SUBPATH: config/helm
+      new_version: v0.0.0
 
     steps:
       - name: Checkout Code
