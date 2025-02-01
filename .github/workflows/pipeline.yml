@@ -97,7 +97,7 @@ jobs:
           mkdir -p temp-helm-oci
           helm package ${HELM_CHART_SUBPATH} --destination ./temp-helm-oci
           CHART_PACKAGE=$(ls ./temp-helm-oci/*.tgz)
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u ${{ github.actor }} --password-stdin
           helm push ${CHART_PACKAGE} oci://${HELM_IMAGE} 
 
       # - name: Commit Version Changes
