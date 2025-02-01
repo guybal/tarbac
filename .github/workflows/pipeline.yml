@@ -15,7 +15,6 @@ jobs:
       HELM_IMAGE: ghcr.io/guybalmas/tarbac
       VERSION_FILE: VERSION
       HELM_CHART_SUBPATH: config/helm
-      new_version: v0.0.0
 
     steps:
       - name: Checkout Code
@@ -92,7 +91,7 @@ jobs:
           mkdir -p temp-helm-oci
           helm package ${HELM_CHART_SUBPATH} --destination ./temp-helm-oci
           CHART_PACKAGE=$(ls ./temp-helm-oci/*.tgz)
-          helm push oci://ghcr.io/guybalmas/tarbac ${CHART_PACKAGE}
+          helm push ${CHART_PACKAGE} oci://${HELM_IMAGE} 
 
       # - name: Commit Version Changes
       #   env:
