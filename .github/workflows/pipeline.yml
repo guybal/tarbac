@@ -86,12 +86,13 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-          
+
       - name: Push Helm Chart as OCI Image
         run: |
-          helm registry login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
-          helm package ${HELM_CHART_SUBPATH} --destination ./
-          helm push oci://ghcr.io/guybalmas/tarbac ./${HELM_CHART_SUBPATH}-${{ env.new_version }}.tgz
+          mkdir -p temp-helm-oci
+          helm package ${HELM_CHART_SUBPATH} --destination ./temp-helm-oci
+          CHART_PACKAGE=$(ls ./temp-helm-oci/*.tgz)
+          helm push oci://ghcr.io/guybalmas/tarbac temp-helm-oci/${CHART_PACKAGE}
 
       # - name: Commit Version Changes
       #   env:
