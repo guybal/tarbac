@@ -92,7 +92,7 @@ jobs:
           mkdir -p temp-helm-oci
           helm package ${HELM_CHART_SUBPATH} --destination ./temp-helm-oci
           CHART_PACKAGE=$(ls ./temp-helm-oci/*.tgz)
-          helm push oci://ghcr.io/guybalmas/tarbac temp-helm-oci/${CHART_PACKAGE}
+          helm push oci://ghcr.io/guybalmas/tarbac ${CHART_PACKAGE}
 
       # - name: Commit Version Changes
       #   env:
