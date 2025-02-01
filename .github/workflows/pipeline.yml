@@ -32,13 +32,14 @@ jobs:
       - name: Update Version
         id: bump-version
         run: |
+
           if [ -f "$VERSION_FILE" ]; then
             echo "current_version=$(cat $VERSION_FILE)" >> $GITHUB_ENV
           else
             echo "current_version=v1.0.0" >> $GITHUB_ENV
           fi
 
-          # current_version="${{ env.current_version }}"
+          current_version=$(cat $VERSION_FILE)
 
           if [[ "$current_version" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
             major="${BASH_REMATCH[1]}"
@@ -51,7 +52,7 @@ jobs:
             exit 1
           fi
 
-          echo "${new_version}" > $VERSION_FILE
+          echo "$new_version" > $VERSION_FILE
 
       - name: Generate Code
         run: |
