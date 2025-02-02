@@ -79,21 +79,18 @@ jobs:
       - name: Update Chart Version
         id: bump-chart-version
         run: |
+            # Update Chart.yaml
             current_chart_version=$(grep '^version:' $HELM_CHART_SUBPATH/Chart.yaml | awk '{print $2}')
             new_chart_version=$(echo ${current_chart_version} | awk -F. '{print $1"."$2"."$3+1}')
             sed -i "s/^version: .*/version: ${new_chart_version}/" $HELM_CHART_SUBPATH/Chart.yaml
             echo "new_chart_version=$new_chart_version" >> $GITHUB_ENV
-      
-      - name: Update Helm Chart
-        run: |
-          cp -r config/crd/bases/* config/helm/templates/crd/
-          
-          # Update values.yaml
-          sed -i "s|^  tag: .*|  tag: ${new_version}|g" $HELM_CHART_SUBPATH/values.yaml
-          
-          # Update Chart.yaml
-          sed -i "s|^appVersion: \".*\"|appVersion: \"${new_version}\"|g" $HELM_CHART_SUBPATH/Chart.yaml   
 
+            # Update CRD templates
+            cp -r config/crd/bases/* config/helm/templates/crd/
+          
+            # Update values.yaml
+            sed -i "s|^  tag: .*|  tag: ${new_version}|g" $HELM_CHART_SUBPATH/values.yaml
+          
       - name: Push Helm Chart as OCI Image
         run: |
           mkdir -p temp-helm-oci
@@ -103,14 +100,14 @@ jobs:
           helm push ${CHART_PACKAGE} oci://${HELM_IMAGE} 
 
       - name: Commit Version Changes
-        # env:
-        #   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/guybal/tarbac.git
+          git fetch origin ${{ env.branch }}:${{ env.branch }}
+          git checkout ${{ env.branch }}
           git add $VERSION_FILE $HELM_CHART_SUBPATH/Chart.yaml $HELM_CHART_SUBPATH/values.yaml
           git add config/helm/templates/crd
           git commit -m "Update to version ${{ env.new_version }}"
-          git tag -a ${{ env.new_version }} -m "${{ env.new_version }}" 
+          git tag -a ${{ env.new_version }} -m "${{ env.new_version }}"
           git push --follow-tags origin ${{ env.branch }}
