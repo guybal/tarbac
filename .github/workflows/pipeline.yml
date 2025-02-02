@@ -103,9 +103,6 @@ jobs:
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/guybal/tarbac.git
-          git fetch origin ${{ env.branch }}:${{ env.branch }}
-          git checkout ${{ env.branch }}
           git add $VERSION_FILE $HELM_CHART_SUBPATH/Chart.yaml $HELM_CHART_SUBPATH/values.yaml
           git add config/helm/templates/crd
           git commit -m "Update to version ${{ env.new_version }}"
