@@ -122,8 +122,9 @@ jobs:
         id: push-helm-chart
         run: |
           CHART_PACKAGE=$(ls ./temp-helm-oci/*.tgz)
-          helm push ${CHART_PACKAGE} oci://${{ env.HELM_IMAGE }}
-          echo "CHART_DIGEST=$(helm show chart ${CHART_PACKAGE} | grep Digest | awk '{print $2}')" >> $GITHUB_ENV
+          helm push ${CHART_PACKAGE} oci://${{ env.HELM_IMAGE }} &> push-metadata.txt
+          CHART_DIGEST=$(awk '/Digest: /{print $2}' push-metadata.txt)
+          echo "CHART_DIGEST=${CHART_DIGEST}" >> $GITHUB_ENV
 
       - name: Sign Helm Chart
         run: |
@@ -139,7 +140,6 @@ jobs:
           body: |
             Docker Image Digest: ${{ steps.push-helm-chart.outputs.digest }}
             Helm Chart Digest: ${{ env.CHART_DIGEST }}
- 
           draft: false
           prerelease: false
         
