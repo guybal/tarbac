@@ -82,8 +82,7 @@ jobs:
         run: |
           docker push "${{ env.OCI_IMAGE }}:${{ env.new_app_version }}"
           DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "${{ env.OCI_IMAGE }}:${{ env.new_app_version }}" | cut -d'@' -f2)
-          IMAGE_DIGEST="${{ env.OCI_IMAGE }}@${DIGEST}"
-          echo "IMAGE_DIGEST=${IMAGE_DIGEST}" >> $GITHUB_ENV
+          echo "IMAGE_DIGEST=${DIGEST}" >> $GITHUB_ENV
 
       - name: Sign Docker Image
         run: |
