@@ -80,13 +80,14 @@ jobs:
       - name: Push Docker Image
         id: push-docker
         run: |
-          docker push "${OCI_IMAGE}:${{ env.new_app_version }}"
-          IMAGE_DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "${OCI_IMAGE}:${{ env.new_app_version }}")
+          docker push "${{ env.OCI_IMAGE }}:${{ env.new_app_version }}"
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "${{ env.OCI_IMAGE }}:${{ env.new_app_version }}" | cut -d'@' -f2)
+          IMAGE_DIGEST="${{ env.OCI_IMAGE }}@${DIGEST}"
           echo "IMAGE_DIGEST=${IMAGE_DIGEST}" >> $GITHUB_ENV
 
       - name: Sign Docker Image
         run: |
-          cosign sign $OCI_IMAGE:${{ env.new_app_version }}
+          cosign sign $OCI_IMAGE@${{ env.IMAGE_DIGEST }}
 
       - name: Update Version
         run: |
@@ -98,6 +99,7 @@ jobs:
           current_chart_version=$(grep '^version:' $HELM_CHART_SUBPATH/Chart.yaml | awk '{print $2}')
           new_chart_version=$(echo ${current_chart_version} | awk -F. '{print $1"."$2"."$3+1}')
           sed -i "s/^version: .*/version: ${new_chart_version}/" $HELM_CHART_SUBPATH/Chart.yaml
+          sed -i "s|^appVersion: .*|appVersion: \"${new_app_version}\"|g" $HELM_CHART_SUBPATH/Chart.yaml
           echo "new_chart_version=$new_chart_version" >> $GITHUB_ENV
 
           # Update CRDs
@@ -109,7 +111,7 @@ jobs:
       - name: Package Helm Chart
         run: |
           mkdir -p temp-helm-oci
-          helm package ${HELM_CHART_SUBPATH} --app-version ${{ env.new_app_version }} --destination ./temp-helm-oci
+          helm package ${HELM_CHART_SUBPATH} --destination ./temp-helm-oci
 
       - name: Log in to GitHub Container Registry for Helm
         run: |
@@ -135,7 +137,7 @@ jobs:
           tag_name: ${{ env.new_app_version }}
           release_name: Release ${{ env.new_app_version }}
           body: |
-            Docker Image Digest: ${{ steps.push-helm-chart.outputs.digest }}
+            Controller Image Digest: ${{ env.IMAGE_DIGEST }}
             Helm Chart Digest: ${{ env.CHART_DIGEST }}
           draft: false
           prerelease: false
