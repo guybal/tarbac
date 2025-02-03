@@ -17,8 +17,8 @@ jobs:
       id-token: write
 
     env:
-      DOCKER_IMAGE: ghcr.io/guybal/tarbac-controller
-      HELM_IMAGE: ghcr.io/guybal/tarbac
+      DOCKER_IMAGE: ghcr.io/guybal/tarbac/controller
+      HELM_IMAGE: ghcr.io/guybal/tarbac/helm
       VERSION_FILE: VERSION
       HELM_CHART_SUBPATH: config/helm
       branch: feature/helm-oci
