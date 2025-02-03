@@ -123,7 +123,7 @@ jobs:
         run: |
           CHART_PACKAGE=$(ls ./temp-helm-oci/*.tgz)
           helm push ${CHART_PACKAGE} oci://${{ env.HELM_IMAGE }}
-          echo "CHART_DIGEST=$(helm show chart ${CHART_PACKAGE} | grep digest | awk '{print $2}')" >> $GITHUB_ENV
+          echo "CHART_DIGEST=$(helm show chart ${CHART_PACKAGE} | grep Digest | awk '{print $2}')" >> $GITHUB_ENV
 
       - name: Sign Helm Chart
         run: |
