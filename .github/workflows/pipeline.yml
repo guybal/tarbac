@@ -87,7 +87,7 @@ jobs:
 
       - name: Sign Docker Image
         run: |
-          cosign sign --key cosign.key $DOCKER_IMAGE:${{ env.new_app_version }}
+          cosign sign -y $DOCKER_IMAGE:${{ env.new_app_version }}
 
       - name: Update Version
         run: |
