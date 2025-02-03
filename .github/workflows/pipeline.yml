@@ -36,23 +36,23 @@ jobs:
         id: read-version
         run: |
           if [ -f "$VERSION_FILE" ]; then
-            echo "current_version=$(cat $VERSION_FILE)" >> $GITHUB_ENV
+            echo "current_app_version=$(cat $VERSION_FILE)" >> $GITHUB_ENV
           else
-            echo "current_version=v1.0.0" >> $GITHUB_ENV
+            echo "current_app_version=v1.0.0" >> $GITHUB_ENV
           fi
 
       - name: Bump Patch Version
         id: bump-version
         run: |
-          current_version="${{ env.current_version }}"
-          if [[ "$current_version" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+          current_app_version="${{ env.current_app_version }}"
+          if [[ "$current_app_version" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
             major="${BASH_REMATCH[1]}"
             minor="${BASH_REMATCH[2]}"
             patch="${BASH_REMATCH[3]}"
-            new_version="v${major}.${minor}.$((patch + 1))"
-            echo "new_version=$new_version" >> $GITHUB_ENV
+            new_app_version="v${major}.${minor}.$((patch + 1))"
+            echo "new_app_version=$new_app_version" >> $GITHUB_ENV
           else
-            echo "Error: Invalid version format $current_version" >&2
+            echo "Error: Invalid version format $current_app_version" >&2
             exit 1
           fi
 
@@ -65,7 +65,7 @@ jobs:
 
       - name: Build Docker Image
         run: |
-          docker build -t "${DOCKER_IMAGE}:${{ env.new_version }}" .
+          docker build -t "${DOCKER_IMAGE}:${{ env.new_app_version }}" .
 
 
       - name: Log in to GitHub Container Registry
@@ -83,18 +83,15 @@ jobs:
 
       - name: Push Docker Image
         run: |
-          docker push "${DOCKER_IMAGE}:${{ env.new_version }}"
+          docker push "${DOCKER_IMAGE}:${{ env.new_app_version }}"
 
       - name: Sign Docker Image
-        env:
-          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
         run: |
-          echo "${{ secrets.COSIGN_KEY }}" > cosign.key
-          cosign sign --key cosign.key $DOCKER_IMAGE:${{ env.new_version }}
+          cosign sign --key cosign.key $DOCKER_IMAGE:${{ env.new_app_version }}
 
       - name: Update Version
         run: |
-          echo "${{ env.new_version }}" > $VERSION_FILE
+          echo "${{ env.new_app_version }}" > $VERSION_FILE
 
       - name: Update Helm Chart
         run: |
@@ -108,12 +105,12 @@ jobs:
           cp -r config/crd/bases/* config/helm/templates/crd/
           
           # Update values.yaml
-          sed -i "s|^  tag: .*|  tag: ${new_version}|g" $HELM_CHART_SUBPATH/values.yaml
+          sed -i "s|^  tag: .*|  tag: ${new_app_version}|g" $HELM_CHART_SUBPATH/values.yaml
                     
       - name: Package Helm Chart
         run: |
           mkdir -p temp-helm-oci
-          helm package ${HELM_CHART_SUBPATH} --app-version ${{ env.new_version }} --destination ./temp-helm-oci
+          helm package ${HELM_CHART_SUBPATH} --app-version ${{ env.new_app_version }} --destination ./temp-helm-oci
 
       - name: Log in to GitHub Container Registry for Helm
         run: |
@@ -127,18 +124,16 @@ jobs:
           echo "CHART_DIGEST=$(helm show chart ${CHART_PACKAGE} | grep digest | awk '{print $2}')" >> $GITHUB_ENV
 
       - name: Sign Helm Chart
-        env:
-          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
         run: |
-          cosign sign --key cosign.key oci://${{ env.HELM_IMAGE }}:${{ env.new_chart_version }}
+          cosign sign -y oci://${{ env.HELM_IMAGE }}@${{ env.CHART_DIGEST }}
 
       - name: Create Release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ env.new_version }}
-          release_name: Release ${{ env.new_version }}
+          tag_name: ${{ env.new_app_version }}
+          release_name: Release ${{ env.new_app_version }}
           body: |
             Docker Image Digest: ${{ steps.push-helm-chart.outputs.digest }}
             Helm Chart Digest: ${{ env.CHART_DIGEST }}
@@ -155,6 +150,6 @@ jobs:
           git config user.email "actions@github.com"
           git add $VERSION_FILE $HELM_CHART_SUBPATH/Chart.yaml $HELM_CHART_SUBPATH/values.yaml
           git add config/helm/templates/crd
-          git commit -m "Update to version ${{ env.new_version }}"
-          git tag -a ${{ env.new_version }} -m "${{ env.new_version }}"
+          git commit -m "Update to version ${{ env.new_app_version }}"
+          git tag -a ${{ env.new_app_version }} -m "${{ env.new_app_version }}"
           git push --follow-tags origin ${{ env.branch }}
