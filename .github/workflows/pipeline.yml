@@ -130,7 +130,7 @@ jobs:
         env:
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
         run: |
-          cosign sign --key cosign.key oci://${{ env.HELM_IMAGE }}:${{ env.new_version }}
+          cosign sign --key cosign.key oci://${{ env.HELM_IMAGE }}:${{ env.new_chart_version }}
 
       - name: Create Release
         uses: actions/create-release@v1
