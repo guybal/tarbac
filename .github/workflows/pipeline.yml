@@ -75,11 +75,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install Cosign
-        run: |
-          curl -LO https://github.com/sigstore/cosign/releases/download/v1.4.1/cosign-linux-amd64
-          chmod +x cosign-linux-amd64
-          sudo mv cosign-linux-amd64 /usr/local/bin/cosign
+      # - name: Install Cosign
+      #   run: |
+      #     curl -LO https://github.com/sigstore/cosign/releases/download/v1.4.1/cosign-linux-amd64
+      #     chmod +x cosign-linux-amd64
+      #     sudo mv cosign-linux-amd64 /usr/local/bin/cosign
+      - name: Setup Cosign
+        uses: sigstore/cosign-installer@main
 
       - name: Push Docker Image
         run: |
@@ -87,7 +89,7 @@ jobs:
 
       - name: Sign Docker Image
         run: |
-          cosign sign -y $DOCKER_IMAGE:${{ env.new_app_version }}
+          cosign sign $DOCKER_IMAGE:${{ env.new_app_version }}
 
       - name: Update Version
         run: |
@@ -125,7 +127,7 @@ jobs:
 
       - name: Sign Helm Chart
         run: |
-          cosign sign -y oci://${{ env.HELM_IMAGE }}@${{ env.CHART_DIGEST }}
+          cosign sign oci://${{ env.HELM_IMAGE }}@${{ env.CHART_DIGEST }}
 
       - name: Create Release
         uses: actions/create-release@v1
@@ -137,10 +139,7 @@ jobs:
           body: |
             Docker Image Digest: ${{ steps.push-helm-chart.outputs.digest }}
             Helm Chart Digest: ${{ env.CHART_DIGEST }}
-            Cosign Public Key:
-            ```
-            ${{ secrets.COSIGN_PUBLIC_KEY }}
-            ```
+ 
           draft: false
           prerelease: false
         
