@@ -128,7 +128,7 @@ jobs:
 
       - name: Sign Helm Chart
         run: |
-          cosign sign oci://${{ env.HELM_IMAGE }}@${{ env.CHART_DIGEST }}
+          cosign sign ${{ env.HELM_IMAGE }}@${{ env.CHART_DIGEST }}
 
       - name: Create Release
         uses: actions/create-release@v1
