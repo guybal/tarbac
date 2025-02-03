@@ -81,16 +81,16 @@ jobs:
           chmod +x cosign-linux-amd64
           sudo mv cosign-linux-amd64 /usr/local/bin/cosign
 
+      - name: Push Docker Image
+        run: |
+          docker push "${DOCKER_IMAGE}:${{ env.new_version }}"
+
       - name: Sign Docker Image
         env:
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
         run: |
           echo "${{ secrets.COSIGN_KEY }}" > cosign.key
           cosign sign --key cosign.key $DOCKER_IMAGE:${{ env.new_version }}
-
-      - name: Push Docker Image
-        run: |
-          docker push "${DOCKER_IMAGE}:${{ env.new_version }}"
 
       - name: Update Version
         run: |
