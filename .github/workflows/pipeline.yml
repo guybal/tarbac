@@ -77,7 +77,8 @@ jobs:
         env:
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
         run: |
-          cosign sign --key ${{ secrets.COSIGN_KEY }} $DOCKER_IMAGE:${{ env.new_version }}
+          echo "${{ secrets.COSIGN_KEY }}" > cosign.key
+          cosign sign --key cosign.key $DOCKER_IMAGE:${{ env.new_version }}
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v2
@@ -96,18 +97,22 @@ jobs:
 
       - name: Update Helm Chart
         run: |
+          # Update Chart.yaml
+          current_chart_version=$(grep '^version:' $HELM_CHART_SUBPATH/Chart.yaml | awk '{print $2}')
+          new_chart_version=$(echo ${current_chart_version} | awk -F. '{print $1"."$2"."$3+1}')
+          sed -i "s/^version: .*/version: ${new_chart_version}/" $HELM_CHART_SUBPATH/Chart.yaml
+          echo "new_chart_version=$new_chart_version" >> $GITHUB_ENV
+
+          # Update CRDs
           cp -r config/crd/bases/* config/helm/templates/crd/
           
           # Update values.yaml
           sed -i "s|^  tag: .*|  tag: ${new_version}|g" $HELM_CHART_SUBPATH/values.yaml
-          
-          # Update Chart.yaml
-          sed -i "s|^appVersion: \".*\"|appVersion: \"${new_version}\"|g" $HELM_CHART_SUBPATH/Chart.yaml   
-          
+                    
       - name: Package Helm Chart
         run: |
           mkdir -p temp-helm-oci
-          helm package ${HELM_CHART_SUBPATH} --destination ./temp-helm-oci
+          helm package ${HELM_CHART_SUBPATH} --app-version ${{ env.new_version }} --destination ./temp-helm-oci
 
       - name: Log in to GitHub Container Registry for Helm
         run: |
@@ -124,7 +129,7 @@ jobs:
         env:
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
         run: |
-          cosign sign --key ${{ secrets.COSIGN_KEY }} oci://${{ env.HELM_IMAGE }}:${{ env.new_version }}
+          cosign sign --key cosign.key oci://${{ env.HELM_IMAGE }}:${{ env.new_version }}
 
       - name: Create Release
         uses: actions/create-release@v1
