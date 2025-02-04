@@ -1,14 +1,84 @@
 # Time and Role Based Access Controller
 
 - [Time and Role Based Access Controller](#time-and-role-based-access-controller)
+  - [Install](#install)
+    - [TL;DR](#tldr)
+      - [Installation Script](#installation-script)
+      - [Helm](#helm)
+    - [Detailed Installation](#detailed-installation)
+      - [Prerequisites](#prerequisites)
+      - [Installation](#installation)
+        - [View Available Values](#view-available-values)
+        - [Create `tarbac-values.yaml` file](#create-tarbac-valuesyaml-file)
   - [Design Overview](#design-overview)
-  - [Install using Helm](#install-using-helm)
-    - [Create a Registry Secret](#create-a-registry-secret)
-    - [Prepare `tarbac-values.yaml` File](#prepare-tarbac-valuesyaml-file)
-    - [Install](#install)
   - [Getting Started with TARBAC](#getting-started-with-tarbac)
 
-**Time and Role-Based Access Controller (TARBAC)** provides a Kubernetes-native solution to manage temporary RBAC permissions dynamically. It ensures secure, time-limited access by leveraging a self-service, policy-driven approach. Developers request what they need, policies validate the request, and temporary access is granted (and revoked) automatically.
+**Time, Atribute & Role-Based Access Controller (TARBAC)** provides a Kubernetes-native solution to manage temporary RBAC permissions dynamically. It ensures secure, time-limited access by leveraging a self-service, policy-driven approach. Developers request what they need, policies validate the request, and temporary access is granted (and revoked) automatically.
+
+---
+
+## Install
+
+### TL;DR
+
+#### Installation Script
+
+To quickly install TARBAC, run the following script:
+
+```bash
+curl -sL https://raw.githubusercontent.com/guybal/tarbac/main/install.sh | bash
+```
+
+#### Helm
+
+Alternatively, you can install TARBAC using Helm:
+
+```bash
+helm install tarbac oci://ghcr.io/guybal/helm-charts/tarbac --version 1.1.6
+```
+
+### Detailed Installation
+
+#### Prerequisites
+
+To install TARBAC, ensure you have the following prerequisites:
+
+- A running [**Kubernetes cluster**](https://kubernetes.io/docs/setup/): Version `v1.29.10` or later.
+- [**cert-manager**](https://cert-manager.io/docs/installation/helm/): Version `v1.16.2` or later installed on the Kubernetes cluster.
+  
+    **⚠️ Warning**
+    > Disabling `cert-manager` integration for certificate management is supported and will result in a self-signed certificate for the Webhook. However, it is **highly recommended** to use `cert-manager` to ensure secure and automated certificate handling.
+
+- [**kubectl**](https://kubernetes.io/docs/tasks/tools/#kubectl): Client and Server Version `v1.29.10` or later.
+- [**Go**](https://go.dev/doc/install): Version `1.23.0` or later.
+
+#### Installation
+
+##### View Available Values
+
+```bash
+helm show values oci://ghcr.io/guybal/helm-charts/tarbac --version 1.1.6
+```
+
+##### Create `tarbac-values.yaml` file
+
+Create a `tarbac-values.yaml` file to customize the installation:
+
+```yaml
+namespace:
+  name: tarbac-system
+image:
+  repository: ghcr.io/guybal/tarbac/controller
+  tag: v1.1.14
+```
+
+Use this file during the Helm installation:
+
+```bash
+helm install tarbac oci://ghcr.io/guybal/helm-charts/tarbac --version 1.1.6 -f tarbac-values.yaml --namespace tarbac-system --create-namespace
+```
+
+---
 
 ## Design Overview
 
@@ -16,40 +86,6 @@ TARBAC is designed to provide dynamic, temporary RBAC permissions in Kubernetes.
 
 For a detailed design document, please refer to:
 [**TARBAC High-Level Design**](./docs/design.md)
-
----
-
-## Install using Helm
-
-### Create a Registry Secret
-
-```bash
-DOCKER_REGISTRY_SERVER=docker.io
-DOCKER_USER=<Type your dockerhub username, same as when you `docker login`>
-DOCKER_PASSWORD=<Type your dockerhub password, same as when you `docker login`>
-
-kubectl create secret docker-registry dockerhub-creds \
-  --docker-server=$DOCKER_REGISTRY_SERVER \
-  --docker-username=$DOCKER_USER \
-  --docker-password=$DOCKER_PASSWORD \
-```
-
-### Prepare `tarbac-values.yaml` File
-
-```yaml
-image:
-  # repository: docker.io/guybalmas/temporary-rbac-controller
-  # tag: v1.1.10
-  pullSecret:
-    name: dockerhub-creds
-```
-
-### Install
-
-```bash
-
-helm install tarbac config/helm -f tarbac-values.yaml -n tarbac-system --create-namespace
-```
 
 ---
 
