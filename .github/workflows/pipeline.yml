@@ -98,6 +98,7 @@ jobs:
           new_chart_version=$(echo ${current_chart_version} | awk -F. '{print $1"."$2"."$3+1}')
           sed -i "s/^version: .*/version: ${new_chart_version}/" $HELM_CHART_SUBPATH/Chart.yaml
           sed -i "s|^appVersion: .*|appVersion: \"${new_app_version}\"|g" $HELM_CHART_SUBPATH/Chart.yaml
+          echo "current_chart_version=$new_chart_version" >> $GITHUB_ENV
           echo "new_chart_version=$new_chart_version" >> $GITHUB_ENV
 
           # Update CRDs
@@ -126,6 +127,16 @@ jobs:
       - name: Sign Helm Chart
         run: |
           cosign sign ${{ env.HELM_IMAGE }}/tarbac@${{ env.CHART_DIGEST }} --yes --recursive --tlog-upload=true
+
+      - name: Update Documentation
+        run: |
+          # Update README.md
+          sed -i -E "s|tag: ${{ env.current_app_version }}|tag: ${{ env.new_app_version }}|g" README.md
+          sed -i -E "s|--version ${{ env.current_chart_version }}|--version ${{ env.new_chart_version }}|g" README.md
+          
+          # Update install.sh
+          sed -i -E "s|tag: ${{ env.current_app_version }}|tag: ${{ env.new_app_version }}|g" config/install.sh
+          sed -i -E "s|VERSION=\"${{ env.current_chart_version }}\"|VERSION=\"${{ env.new_chart_version }}\"|g" config/install.sh
 
       - name: Create Release
         uses: actions/create-release@v1
