@@ -71,7 +71,9 @@ func (r *SudoRequestReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	// Initial State
 	if sudoRequest.Status.State == "" {
-		r.Recorder.Event(&sudoRequest, "Normal", "Submitted", fmt.Sprintf("User %s submitted a SudoRequest for policy %s for a duration of %s [UID: %s]", sudoRequest.Annotations["tarbac.io/requester"], sudoRequest.Spec.Policy, duration, string(sudoRequest.ObjectMeta.UID)))
+		// r.Recorder.Event(&sudoRequest, "Normal", "Submitted", fmt.Sprintf("User %s submitted a SudoRequest for policy %s for a duration of %s [UID: %s]", sudoRequest.Annotations["tarbac.io/requester"], sudoRequest.Spec.Policy, duration, string(sudoRequest.ObjectMeta.UID)))
+		eventMessage := utils.FormatEventMessage(fmt.Sprintf("User '%s' submitted a SudoRequest for policy '%s' for a duration of %s", requester, sudoRequest.Spec.Policy, duration), requestId)
+		r.Recorder.Event(&sudoRequest, "Normal", "Submitted", eventMessage)
 		sudoRequest.Status.State = "Pending"
 		sudoRequest.Status.RequestID = requestId
 
@@ -109,7 +111,9 @@ func (r *SudoRequestReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 		namespaces := []string{sudoRequest.Namespace}
 
-		r.Recorder.Event(&sudoRequest, "Normal", "Approved", fmt.Sprintf("User '%s' was approved by '%s' SudoPolicy [UID: %s]", requester, sudoPolicy.Name, requestId))
+		// r.Recorder.Event(&sudoRequest, "Normal", "Approved", fmt.Sprintf("User '%s' was approved by '%s' SudoPolicy [UID: %s]", requester, sudoPolicy.Name, requestId))
+		eventMessage := utils.FormatEventMessage(fmt.Sprintf("User '%s' was approved by '%s' SudoPolicy", requester, sudoPolicy.Name), requestId)
+		r.Recorder.Event(&sudoRequest, "Normal", "Approved", eventMessage)
 		return r.createTemporaryRBACsForNamespaces(ctx, &sudoRequest, namespaces, &sudoPolicy, requester, logger, requestId)
 	}
 
@@ -133,7 +137,9 @@ func (r *SudoRequestReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 				if err != nil {
 					if apierrors.IsNotFound(err) {
 						utils.LogErrorUID(logger, err, "Child TemporaryRBAC resource not found", requestId, "child", childResource)
-						r.Recorder.Event(&sudoRequest, "Warning", "MissingChildResource", fmt.Sprintf("Child resource %s/%s not found", childResource.Namespace, childResource.Name))
+						// r.Recorder.Event(&sudoRequest, "Warning", "MissingChildResource", fmt.Sprintf("Child resource %s/%s not found", childResource.Namespace, childResource.Name))
+						eventMessage := utils.FormatEventMessage(fmt.Sprintf("Child resource %s/%s not found in namespace", childResource.Kind, childResource.Name, childResource.Namespace), requestId)
+						r.Recorder.Event(&sudoRequest, "Warning", "MissingChildResource", eventMessage)
 						continue
 					}
 					utils.LogErrorUID(logger, err, "Failed to fetch child resource", requestId, "child", childResource)
@@ -154,7 +160,9 @@ func (r *SudoRequestReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 					if err := r.Status().Update(ctx, &sudoRequest); err != nil {
 						return r.errorRequest(ctx, err, &sudoRequest, "Failed to update expired SudoRequest status", requestId)
 					}
-					r.Recorder.Event(&sudoRequest, "Warning", "Expired", fmt.Sprintf("SudoRequest Expired for User %s, revoked permissions for policy %s [UID: %s]", requester, sudoRequest.Spec.Policy, requestId))
+					// r.Recorder.Event(&sudoRequest, "Warning", "Expired", fmt.Sprintf("SudoRequest Expired for User %s, revoked permissions for policy %s [UID: %s]", requester, sudoRequest.Spec.Policy, requestId))
+					eventMessage := utils.FormatEventMessage(fmt.Sprintf("SudoRequest Expired for User '%s', revoked permissions for policy '%s'", requester, sudoRequest.Spec.Policy), requestId)
+					r.Recorder.Event(&sudoRequest, "Warning", "Expired", eventMessage)
 					utils.LogInfoUID(logger, "SudoRequest has expired", requestId, "name", sudoRequest.Name)
 					return ctrl.Result{}, nil
 				case "Error":
@@ -162,7 +170,9 @@ func (r *SudoRequestReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 					if err := r.Status().Update(ctx, &sudoRequest); err != nil {
 						return r.errorRequest(ctx, err, &sudoRequest, "Failed to update expired SudoRequest status", requestId)
 					}
-					r.Recorder.Event(&sudoRequest, "Error", "Error", fmt.Sprintf("Error detected while processing SudoRequest for User '%s' and policy '%s' [UID: %s]", requester, sudoRequest.Spec.Policy, requestId))
+					// r.Recorder.Event(&sudoRequest, "Error", "Error", fmt.Sprintf("Error detected while processing SudoRequest for User '%s' and policy '%s' [UID: %s]", requester, sudoRequest.Spec.Policy, requestId))
+					eventMessage := utils.FormatEventMessage(fmt.Sprintf("Error detected while processing SudoRequest for User '%s' and policy '%s'", requester, sudoRequest.Spec.Policy), requestId)
+					r.Recorder.Event(&sudoRequest, "Error", "Error", eventMessage)
 					utils.LogInfoUID(logger, "SudoRequest has errors", requestId, "name", sudoRequest.Name)
 					return ctrl.Result{}, nil
 				}
@@ -198,7 +208,9 @@ func (r *SudoRequestReconciler) rejectRequest(ctx context.Context, sudoRequest *
 		utils.LogErrorUID(logger, err, "Failed to update SudoRequest status to Rejected", requestID)
 		return ctrl.Result{}, err
 	}
-	r.Recorder.Event(sudoRequest, "Warning", "Rejected", fmt.Sprintf("%s [UID: %s]", message, requestID))
+	// r.Recorder.Event(sudoRequest, "Warning", "Rejected", fmt.Sprintf("%s [UID: %s]", message, requestID))
+	eventMessage := utils.FormatEventMessage(fmt.Sprintf("SudoRequest rejected: %s", message), requestID)
+	r.Recorder.Event(sudoRequest, "Warning", "Rejected", eventMessage)
 	return ctrl.Result{}, nil
 }
 
@@ -213,6 +225,8 @@ func (r *SudoRequestReconciler) errorRequest(ctx context.Context, err error, sud
 		return ctrl.Result{}, err
 	}
 	r.Recorder.Event(sudoRequest, "Error", "SudoRequestError", fmt.Sprintf("%s [UID: %s]", message, requestID))
+	eventMessage := utils.FormatEventMessage(fmt.Sprintf("SudoRequest Error: %s", message), requestID)
+	r.Recorder.Event(sudoRequest, "Error", "SudoRequestError", eventMessage)
 	return ctrl.Result{}, nil
 }
 

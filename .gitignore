@@ -1,2 +1,10 @@
 /.idea/
 /dev/
+Dockerfile-tilt
+manager
+.vscode/settings.json
+api/v1/zz_generated.deepcopy.go
+config/helm/custom-values.yaml
+config/crd/bases/_.yaml
+webhooks/tls.crt
+webhooks/tls.key

@@ -234,7 +234,9 @@ func (r *TemporaryRBACReconciler) ensureBindings(ctx context.Context, tempRBAC *
 		return err
 	}
 
-	r.Recorder.Event(tempRBAC, "Normal", "PermissionsGranted", fmt.Sprintf("Temporary permissions were granted in namespace %s [UID: %s]", tempRBAC.ObjectMeta.Namespace, requestId))
+	// r.Recorder.Event(tempRBAC, "Normal", "PermissionsGranted", fmt.Sprintf("Temporary permissions were granted in namespace %s [UID: %s]", tempRBAC.ObjectMeta.Namespace, requestId))
+	eventMessage := fmt.Sprintf("Temporary permissions were granted for %s in namespace %s", tempRBAC.Name, tempRBAC.Namespace)
+	r.Recorder.Event(tempRBAC, "Normal", "PermissionsGranted", utils.FormatEventMessage(eventMessage, requestId))
 	logger.Info("Successfully ensured bindings and updated status", "TemporaryRBAC", tempRBAC.Name)
 	return nil
 }
@@ -270,7 +272,9 @@ func (r *TemporaryRBACReconciler) cleanupBindings(ctx context.Context, tempRBAC 
 					continue
 				}
 				utils.LogInfoUID(logger, "Successfully deleted RoleBinding", requestId, "kind", child.Kind, "name", child.Name, "namespace", child.Namespace)
-				r.Recorder.Event(tempRBAC, "Normal", "PermissionsRevoked", fmt.Sprintf("Temporary permissions were revoked in namespace %s [UID: %s]", tempRBAC.ObjectMeta.Namespace, requestId))
+				// r.Recorder.Event(tempRBAC, "Normal", "PermissionsRevoked", fmt.Sprintf("Temporary permissions were revoked in namespace %s [UID: %s]", tempRBAC.ObjectMeta.Namespace, requestId))
+				eventMessage := fmt.Sprintf("Temporary permissions were revoked for %s in namespace %s", tempRBAC.Name, tempRBAC.Namespace)
+				r.Recorder.Event(tempRBAC, "Normal", "PermissionsRevoked", utils.FormatEventMessage(eventMessage, requestId))
 			default:
 				utils.LogErrorUID(logger, nil, "Unsupported child resource kind", requestId, "kind", child.Kind)
 				remainingChildResources = append(remainingChildResources, child)

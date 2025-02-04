@@ -8,46 +8,50 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+  
+    permissions:
+      contents: write
+      packages: write
+      attestations: write
+      id-token: write
 
     env:
-      DOCKER_IMAGE: docker.io/guybalmas/temporary-rbac-controller
+      OCI_IMAGE: ghcr.io/guybal/tarbac/controller
+      HELM_IMAGE: ghcr.io/guybal/helm-charts
       VERSION_FILE: VERSION
       HELM_CHART_SUBPATH: config/helm
+      branch: ${{ github.ref_name }}
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: Set up Docker
-        uses: docker/setup-buildx-action@v2
-
-      - name: Log in to DockerHub
-        uses: docker/login-action@v2
+      - name: Set up Go
+        uses: actions/setup-go@v4
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          go-version: '1.23'
 
       - name: Read Current Version
         id: read-version
         run: |
           if [ -f "$VERSION_FILE" ]; then
-            echo "current_version=$(cat $VERSION_FILE)" >> $GITHUB_ENV
+            echo "current_app_version=$(cat $VERSION_FILE)" >> $GITHUB_ENV
           else
-            echo "current_version=v1.0.0" >> $GITHUB_ENV
+            echo "current_app_version=v1.0.0" >> $GITHUB_ENV
           fi
 
       - name: Bump Patch Version
         id: bump-version
         run: |
-          current_version="${{ env.current_version }}"
-          if [[ "$current_version" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+          current_app_version="${{ env.current_app_version }}"
+          if [[ "$current_app_version" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
             major="${BASH_REMATCH[1]}"
             minor="${BASH_REMATCH[2]}"
             patch="${BASH_REMATCH[3]}"
-            new_version="v${major}.${minor}.$((patch + 1))"
-            echo "new_version=$new_version" >> $GITHUB_ENV
+            new_app_version="v${major}.${minor}.$((patch + 1))"
+            echo "new_app_version=$new_app_version" >> $GITHUB_ENV
           else
-            echo "Error: Invalid version format $current_version" >&2
+            echo "Error: Invalid version format $current_app_version" >&2
             exit 1
           fi
 
@@ -58,34 +62,105 @@ jobs:
           go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.16.5
           controller-gen object:headerFile="hack/boilerplate.go.txt" paths="./api/v1"
 
-      - name: Build and Push Docker Image
+      - name: Build Docker Image
         run: |
-          docker build -t "${DOCKER_IMAGE}:${{ env.new_version }}" .
-          docker push "${DOCKER_IMAGE}:${{ env.new_version }}"
+          docker build -t "${OCI_IMAGE}:${{ env.new_app_version }}" .
 
-      - name: Update Helm Chart
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Cosign
+        uses: sigstore/cosign-installer@main
+
+      - name: Push Docker Image
+        id: push-docker
         run: |
-          cp -r config/crd/bases/* config/helm/templates/crd/
+          docker push "${{ env.OCI_IMAGE }}:${{ env.new_app_version }}"
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "${{ env.OCI_IMAGE }}:${{ env.new_app_version }}" | cut -d'@' -f2)
+          echo "IMAGE_DIGEST=${DIGEST}" >> $GITHUB_ENV
+
+      - name: Sign Docker Image
+        run: |
+          cosign sign $OCI_IMAGE@${{ env.IMAGE_DIGEST }} --yes --recursive --tlog-upload=true
 
       - name: Update Version
         run: |
-          echo "${{ env.new_version }}" > $VERSION_FILE
+          echo "${{ env.new_app_version }}" > $VERSION_FILE
+
+      - name: Update Helm Chart
+        run: |
+          # Update Chart.yaml
+          current_chart_version=$(grep '^version:' $HELM_CHART_SUBPATH/Chart.yaml | awk '{print $2}')
+          new_chart_version=$(echo ${current_chart_version} | awk -F. '{print $1"."$2"."$3+1}')
+          sed -i "s/^version: .*/version: ${new_chart_version}/" $HELM_CHART_SUBPATH/Chart.yaml
+          sed -i "s|^appVersion: .*|appVersion: \"${new_app_version}\"|g" $HELM_CHART_SUBPATH/Chart.yaml
+          echo "new_chart_version=$new_chart_version" >> $GITHUB_ENV
+
+          # Update CRDs
+          cp -r config/crd/bases/* config/helm/templates/crd/
           
           # Update values.yaml
-          sed -i "s|^  tag: .*|  tag: ${new_version}|g" $HELM_CHART_SUBPATH/values.yaml
-          
-          # Update Chart.yaml
-          sed -i "s|^appVersion: \".*\"|appVersion: \"${new_version}\"|g" $HELM_CHART_SUBPATH/Chart.yaml   
-                        
-      - name: Commit Version Changes
+          sed -i "s|^  tag: .*|  tag: ${new_app_version}|g" $HELM_CHART_SUBPATH/values.yaml
+                    
+      - name: Package Helm Chart
+        run: |
+          mkdir -p temp-helm-oci
+          helm package ${HELM_CHART_SUBPATH} --destination ./temp-helm-oci
+
+      - name: Log in to GitHub Container Registry for Helm
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Push Helm Chart as OCI Image
+        id: push-helm-chart
+        run: |
+          CHART_PACKAGE=$(ls ./temp-helm-oci/*.tgz)
+          helm push ${CHART_PACKAGE} oci://${{ env.HELM_IMAGE }} &> push-metadata.txt
+          CHART_DIGEST=$(awk '/Digest: /{print $2}' push-metadata.txt)
+          echo "CHART_DIGEST=${CHART_DIGEST}" >> $GITHUB_ENV
+
+      - name: Sign Helm Chart
+        run: |
+          cosign sign ${{ env.HELM_IMAGE }}/tarbac@${{ env.CHART_DIGEST }} --yes --recursive --tlog-upload=true
+
+      - name: Create Release
+        uses: actions/create-release@v1
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ env.new_app_version }}
+          release_name: Release ${{ env.new_app_version }}
+          body: |
+            #### Controller Image Digest: `${{ env.IMAGE_DIGEST }}`
+
+            #### Verify Controller Image Signature: 
+              ```bash
+              cosign verify "${{ env.OCI_IMAGE }}:${{ env.new_app_version }}" \
+                --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+                --certificate-identity-regexp "https://github.com/${{ github.repository_owner }}/tarbac/.*"
+              ```
+
+            #### Helm Chart Digest: `${{ env.CHART_DIGEST }}`
+
+            #### Verify Helm Chart Signature: 
+              ```bash
+              cosign verify "${{ env.HELM_IMAGE }}/tarbac:${{ env.new_chart_version }}" \
+                --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+                --certificate-identity-regexp "https://github.com/${{ github.repository_owner }}/tarbac/.*"
+              ```
+          draft: false
+          prerelease: false
+
+      - name: Commit Version Changes
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-          git remote set-url origin https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/guybal/tarbac.git
           git add $VERSION_FILE $HELM_CHART_SUBPATH/Chart.yaml $HELM_CHART_SUBPATH/values.yaml
           git add config/helm/templates/crd
-          git commit -m "Update to version ${{ env.new_version }}"
-          git tag -a ${{ env.new_version }} -m "${{ env.new_version }}" 
-          git push --follow-tags origin main
+          git commit -m "Update to version ${{ env.new_app_version }}"
+          git tag -a ${{ env.new_app_version }} -m "${{ env.new_app_version }}"
+          git push --follow-tags origin ${{ env.branch }}
