@@ -8,6 +8,16 @@ CLUSTER_NAME=$(kubectl config view --minify -o jsonpath='{.contexts[0].context.c
 API_SERVER=$(kubectl config view --minify -o jsonpath='{.clusters[?(@.name=="'$CLUSTER_NAME'")].cluster.server}')
 CA_CERT_PATH="ca.crt" # Replace with your Kubernetes API server CA
 
+# Check if the CA certificate exists
+if [ ! -f "$CA_CERT_PATH" ]; then
+  echo "CA certificate not found at path: $CA_CERT_PATH, please provide the correct path."
+  exit 1
+fi
+
+# Create the Namespace if it doesn't exist
+echo "Creating Namespace..."
+kubectl get namespace $NAMESPACE >/dev/null 2>&1 || kubectl create namespace $NAMESPACE
+
 # Generate private key and CSR
 echo "Generating private key and CSR..."
 openssl genrsa -out ${USER_NAME}.key 2048
