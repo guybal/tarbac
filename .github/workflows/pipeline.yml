@@ -131,9 +131,13 @@ jobs:
       - name: Update Documentation
         run: |
           # Update README.md
-          sed -i -E "s|tag: v[0-9]+\.[0-9]+\.[0-9]+|tag: ${{ env.new_app_version }}|g" README.md
-          sed -i -E "s|--version  ${{ env.current_chart_version }}|--version  ${{ env.new_chart_version }}|g" README.md
-      
+          sed -i -E "s|tag: ${{ env.current_app_version }}|tag: ${{ env.new_app_version }}|g" README.md
+          sed -i -E "s|--version ${{ env.current_chart_version }}|--version ${{ env.new_chart_version }}|g" README.md
+          
+          # Update install.sh
+          sed -i -E "s|tag: ${{ env.current_app_version }}|tag: ${{ env.new_app_version }}|g" config/install.sh
+          sed -i -E "s|VERSION=\"${{ env.current_chart_version }}\"|VERSION=\"${{ env.new_chart_version }}\"|g" config/install.sh
+
       - name: Create Release
         uses: actions/create-release@v1
         env:
