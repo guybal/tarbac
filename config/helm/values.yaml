@@ -2,7 +2,7 @@ replicaCount: 1
 
 image:
   repository: ghcr.io/guybal/tarbac-controller
-  tag: v1.1.14
+  tag: v1.1.15
   pullPolicy: IfNotPresent
   pullSecret:
     name: ""
