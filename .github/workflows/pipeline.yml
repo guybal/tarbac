@@ -86,7 +86,7 @@ jobs:
 
       - name: Sign Docker Image
         run: |
-          cosign sign $OCI_IMAGE@${{ env.IMAGE_DIGEST }}
+          cosign sign $OCI_IMAGE@${{ env.IMAGE_DIGEST }} --yes --recursive --tlog-upload=true
 
       - name: Update Version
         run: |
@@ -126,27 +126,27 @@ jobs:
 
       - name: Sign Helm Chart
         run: |
-          cosign sign ${{ env.HELM_IMAGE }}/tarbac@${{ env.CHART_DIGEST }}
+          cosign sign ${{ env.HELM_IMAGE }}/tarbac@${{ env.CHART_DIGEST }} --yes --recursive --tlog-upload=true
 
-      - name: Create Release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ env.new_app_version }}
-          release_name: Release ${{ env.new_app_version }}
-          body: |
-            Controller Image Digest: ${{ env.IMAGE_DIGEST }}
-            Helm Chart Digest: ${{ env.CHART_DIGEST }}
-          draft: false
-          prerelease: false
+      # - name: Create Release
+      #   uses: actions/create-release@v1
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   with:
+      #     tag_name: ${{ env.new_app_version }}
+      #     release_name: Release ${{ env.new_app_version }}
+      #     body: |
+      #       Controller Image Digest: ${{ env.IMAGE_DIGEST }}
+      #       Helm Chart Digest: ${{ env.CHART_DIGEST }}
+      #     draft: false
+      #     prerelease: false
         
-      - name: Commit Version Changes
-        run: |
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-          git add $VERSION_FILE $HELM_CHART_SUBPATH/Chart.yaml $HELM_CHART_SUBPATH/values.yaml
-          git add config/helm/templates/crd
-          git commit -m "Update to version ${{ env.new_app_version }}"
-          git tag -a ${{ env.new_app_version }} -m "${{ env.new_app_version }}"
-          git push --follow-tags origin ${{ env.branch }}
+      # - name: Commit Version Changes
+      #   run: |
+      #     git config user.name "GitHub Actions"
+      #     git config user.email "actions@github.com"
+      #     git add $VERSION_FILE $HELM_CHART_SUBPATH/Chart.yaml $HELM_CHART_SUBPATH/values.yaml
+      #     git add config/helm/templates/crd
+      #     git commit -m "Update to version ${{ env.new_app_version }}"
+      #     git tag -a ${{ env.new_app_version }} -m "${{ env.new_app_version }}"
+      #     git push --follow-tags origin ${{ env.branch }}
