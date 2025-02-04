@@ -34,7 +34,7 @@ curl -sL https://raw.githubusercontent.com/guybal/tarbac/main/install.sh | bash
 Alternatively, you can install TARBAC using Helm:
 
 ```bash
-helm install tarbac oci://ghcr.io/guybal/helm-charts/tarbac --version 1.1.6
+helm install tarbac oci://ghcr.io/guybal/helm-charts/tarbac --version 1.1.6 --namespace tarbac-system --create-namespace
 ```
 
 ### Detailed Installation
