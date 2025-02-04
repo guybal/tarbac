@@ -12,8 +12,10 @@ spec:
   template:
     spec:
       serviceAccount: {{ .Values.serviceAccount.name }}
+      {{- if .Values.image.pullSecret.name }}
       imagePullSecrets:
         - name: {{ .Values.image.pullSecret.name }}
+      {{- end }}
       containers:
         - name: cert-generator
           image: docker.io/guybalmas/selfsigned-ca-injector:v0.0.1

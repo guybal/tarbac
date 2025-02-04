@@ -5,7 +5,7 @@ image:
   tag: v1.1.14
   pullPolicy: IfNotPresent
   pullSecret:
-    name: registry-creds
+    name: ""
 
 namespace:
   name: tarbac-system

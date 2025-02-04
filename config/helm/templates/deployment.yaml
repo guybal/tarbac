@@ -14,8 +14,10 @@ spec:
         app: {{ .Chart.Name }}
     spec:
       serviceAccountName: {{ .Values.serviceAccount.name }}
+      {{- if .Values.image.pullSecret.name }}
       imagePullSecrets:
         - name: {{ .Values.image.pullSecret.name }}
+      {{- end }}
       containers:
         - name: controller
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
