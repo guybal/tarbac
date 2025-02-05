@@ -2,5 +2,5 @@ apiVersion: v2
 name: tarbac
 description: A Helm chart for deploying TARBAC Controller, a comprehensive Time, Attribute, and Role-Based Access Controller for Kubernetes. This chart facilitates the management of temporary elevated permissions and fine-grained access control policies.
 type: application
-version: 1.1.7
-appVersion: "v1.1.15"
+version: 1.1.8
+appVersion: "v1.1.16"

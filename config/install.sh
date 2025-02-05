@@ -20,7 +20,7 @@ namespace:
   name: $NAMESPACE
 image:
   repository: ghcr.io/guybal/tarbac/controller
-  tag: v1.1.15
+  tag: v1.1.16
 EOF
 
 # Install the Helm chart
