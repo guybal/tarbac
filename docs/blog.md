@@ -6,35 +6,37 @@ In the fast-paced world of Kubernetes, static Role-Based Access Control (RBAC) s
 
 ## 🔍 The Problems
 
-### 1. Static Permissions in a Dynamic World
+### 🌍 Static Permissions in a Dynamic World
 
-Traditional RBAC systems are static, meaning roles are created once and persist indefinitely unless manually revoked. This approach is ill-suited for dynamic Kubernetes environments where access needs can change rapidly. Static permissions can lead to over-privileged users and potential security vulnerabilities.
+Traditional RBAC systems are static, meaning roles are created once and persist indefinitely unless manually revoked. This approach is not ideal for dynamic Kubernetes environments where access needs can change rapidly. Static permissions can lead to over-privileged users and potential security vulnerabilities and sometimes are just not enough.
 
-**Tarbac Solution**: Time-bound roles bindings. Tarbac introduces roles that automatically expire after a specified duration. This ensures that access is granted just in time, for just the right amount of time, and disappears automatically, eliminating the risk of lingering permissions.
+**Tarbac Solution**: Time-bound bindings. Tarbac introduces bindings that automatically expire after a specified duration.
+This ensures that access is granted just in time, for just the right amount of time, and disappears automatically, eliminating the risk of lingering permissions.
 
 ### ⏳ The IT Bottleneck
 
 In traditional RBAC systems, IT teams are the gatekeepers of access control. This often results in delays and inefficiencies, especially during critical situations like production outages. Developers need to wait for IT approval to gain the necessary access, which can hinder productivity and slow down incident resolution.
 
-**Tarbac Solution**: Self-service, policy-driven access. Tarbac empowers developers to request access through a self-service model. Policies validate the requests, and access is granted automatically if the request aligns with the predefined policies. This reduces the dependency on IT and accelerates the access provisioning process.
+**Tarbac Solution**: Self-service, policy-driven access. Tarbac empowers developers to request access through a self-service model. Policies validate the requests, and access is granted automagically if the request aligns with the predefined policies. This reduces the dependency on IT and accelerates the access provisioning process.
 
 ## 🛠️ How Tarbac Works: Key Components
 
 Tarbac leverages six Custom Resource Definitions (CRDs) to manage access control dynamically:
 
-- **`SudoAccess`**: Temporary, namespace-scoped access.
+- **`SudoRequest`**: Temporary, namespace-scoped access.
 - **`SudoPolicy`**: namespace-scoped policy that validate who can do what, where, and for how long.
-- **`ClusterSudoAccess`**: Break-glass access for cluster-wide emergencies.
+- **`ClusterSudoRequest`**: Break-glass access for cluster-wide emergencies.
 - **`ClusterSudoPolicy`**: Policies governing cluster-level requests.
 - **`TemporaryRBAC`**: Temporary `RoleBindings` for namespace-scoped access.
 - **`ClusterTemporaryRBAC`**: Temporary `ClusterRoleBindings` for cluster-scoped access.
 
 ## 🔄 The Tarbac Workflow
 
-1. **Request Access**: A user submits a SudoAccess or ClusterSudoAccess request, specifying the role, resources, and a time-to-live (TTL).
-2. **Policy Validation**: Tarbac evaluates the request against `SudoPolicy` or `ClusterSudoPolicy`. If the request aligns with the policy, access is granted.
-3. **Temporary RoleBindings**: Tarbac creates the necessary `RoleBindings` or `ClusterRoleBindings` and starts the timer.
-4. **Automatic Cleanup**: When the TTL expires, the permissions are automatically revoked, ensuring no lingering access.
+1. **Request Access**: A user submits a `SudoRequest` or `ClusterSudoRequest` request, specifying nothing but the **policy** to refer to and **duration** requested.
+2. **Evaluate User**: The submitting user is fetched at runtime and attached to the request along with a `RequestID`.
+3. **Policy Validation**: Tarbac evaluates the request against `SudoPolicy` or `ClusterSudoPolicy`. If the request aligns with the policy, access is granted.
+4. **Temporary Bindings**: Tarbac creates the necessary `RoleBindings` or `ClusterRoleBindings` and starts the timer.
+5. **Automatic Cleanup**: When the timer expires, the permissions are automatically revoked, ensuring no lingering access.
 
 ## 🌐 Real-World Use Cases
 
@@ -65,11 +67,11 @@ spec:
 - **`allowedUsers`**: Specifies who can request access.
 - **`allowedNamespaces`**: Limits the policy to the `qa` namespace.
 
-Next, Alice submits a `SudoAccess` request in the desired `qa` namespace:
+Next, Alice submits a `SudoRequest` request in the desired `qa` namespace:
 
 ```yaml
 apiVersion: tarbac.io/v1
-kind: SudoAccess
+kind: SudoRequest
 metadata:
     name: debug-qa-pod
     namespace: qa
@@ -111,7 +113,7 @@ spec:
 - **`allowedUsers`**: Specifies who can request access.
 - **`allowedNamespaces`**: Allows access to all namespaces.
 
-The lead engineer then submits a `ClusterSudoAccess` request:
+The lead engineer then submits a `ClusterSudoRequest` request:
 
 ```yaml
 apiVersion: tarbac.io/v1
@@ -234,9 +236,9 @@ status:
   requestID: ae38f12d-a666-4d60-bb2a-222b10e90b91
 ```
 
-#### 📊 Monitoring and Auditing
+#### 📊 Auditing
 
-Tarbac provides comprehensive monitoring and auditing capabilities to ensure transparency and accountability. Administrators can track access requests, approvals, and revocations through detailed logs and events. This helps in maintaining a clear audit trail and enhances security by allowing for regular reviews and audits of access activities.
+Tarbac provides comprehensive auditing capabilities to ensure transparency and accountability. Administrators can track access requests, approvals, and revocations through detailed logs and events. This helps in maintaining a clear audit trail and enhances security by allowing for regular reviews and audits of access activities.
 
 ##### 📅 Events
 
@@ -292,3 +294,24 @@ Tarbac is designed specifically for cloud-native environments, leveraging Kubern
 ### 📜 **Transparent Auditing in Logs and Eventing**
 
 Tarbac ensures that all access requests and actions are transparently logged and can be audited. This provides a clear trail of who accessed what, when, and for how long, enhancing accountability and security.
+
+## 🗂️ Backlog Features
+
+### 🛡️ **Enhanced Policy Capabilities**
+
+- Support for more complex policy rules.
+
+### 📊 **Monitoring**
+
+- Expose Prometheus metrics to monitor the health and performance of Tarbac components.
+- Suggested metrics include the number of active requests, policies usage, evaluation times, and the number of expired permissions.
+- Create Grafana dashboards to visualize these metrics and provide insights into access control activities.
+
+### 📝 **Sudo History**
+
+- Implement a feature to view the audit log from the kube-apiserver, detailing actions performed by users with elevated permissions.
+- This track log will help administrators understand what changes were made during the elevated access period, enhancing transparency and accountability.
+
+## Summary
+
+Tarbac revolutionizes Kubernetes access control by introducing dynamic, time-bound, and self-service RBAC permissions. It addresses the limitations of traditional static RBAC systems, reducing security risks and operational inefficiencies. By empowering developers with policy-driven access requests and ensuring automatic revocation of permissions, Tarbac enhances productivity, security, and compliance in cloud-native environments. With comprehensive auditing and monitoring capabilities, it provides transparency and accountability, making it an essential tool for modern Kubernetes access management.
