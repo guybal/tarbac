@@ -2,7 +2,7 @@
 
 # Variables
 HELM_CHART="ghcr.io/guybal/helm-charts/tarbac"
-VERSION="1.1.6"
+VERSION="1.1.7"
 RELEASE_NAME="tarbac"
 NAMESPACE="tarbac-system" 
 
@@ -20,7 +20,7 @@ namespace:
   name: $NAMESPACE
 image:
   repository: ghcr.io/guybal/tarbac/controller
-  tag: v1.1.14
+  tag: v1.1.15
 EOF
 
 # Install the Helm chart

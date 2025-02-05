@@ -34,7 +34,7 @@ curl -sL https://raw.githubusercontent.com/guybal/tarbac/main/install.sh | bash
 Alternatively, you can install TARBAC using Helm:
 
 ```bash
-helm install tarbac oci://ghcr.io/guybal/helm-charts/tarbac --version 1.1.6 --namespace tarbac-system --create-namespace
+helm install tarbac oci://ghcr.io/guybal/helm-charts/tarbac --version 1.1.7 --namespace tarbac-system --create-namespace
 ```
 
 ### Detailed Installation
@@ -57,7 +57,7 @@ To install TARBAC, ensure you have the following prerequisites:
 ##### View Available Values
 
 ```bash
-helm show values oci://ghcr.io/guybal/helm-charts/tarbac --version 1.1.6
+helm show values oci://ghcr.io/guybal/helm-charts/tarbac --version 1.1.7
 ```
 
 ##### Create `tarbac-values.yaml` file
@@ -69,13 +69,13 @@ namespace:
   name: tarbac-system
 image:
   repository: ghcr.io/guybal/tarbac/controller
-  tag: v1.1.14
+  tag: v1.1.15
 ```
 
 Use this file during the Helm installation:
 
 ```bash
-helm install tarbac oci://ghcr.io/guybal/helm-charts/tarbac --version 1.1.6 -f tarbac-values.yaml --namespace tarbac-system --create-namespace
+helm install tarbac oci://ghcr.io/guybal/helm-charts/tarbac --version 1.1.7 -f tarbac-values.yaml --namespace tarbac-system --create-namespace
 ```
 
 ---
