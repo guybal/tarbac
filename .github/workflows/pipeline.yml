@@ -170,8 +170,7 @@ jobs:
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-          git add $VERSION_FILE $HELM_CHART_SUBPATH/Chart.yaml $HELM_CHART_SUBPATH/values.yaml
-          git add config/helm/templates/crd
+          git add $VERSION_FILE $HELM_CHART_SUBPATH/Chart.yaml $HELM_CHART_SUBPATH/values.yaml config/helm/templates/crd config/install.sh README.md
           git commit -m "Update to version ${{ env.new_app_version }}"
           git tag -a ${{ env.new_app_version }} -m "${{ env.new_app_version }}"
           git push --follow-tags origin ${{ env.branch }}
