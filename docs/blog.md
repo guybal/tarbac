@@ -312,6 +312,6 @@ Tarbac ensures that all access requests and actions are transparently logged and
 - Implement a feature to view the audit log from the kube-apiserver, detailing actions performed by users with elevated permissions.
 - This track log will help administrators understand what changes were made during the elevated access period, enhancing transparency and accountability.
 
-## Summary
+## 📄 Summary
 
 Tarbac revolutionizes Kubernetes access control by introducing dynamic, time-bound, and self-service RBAC permissions. It addresses the limitations of traditional static RBAC systems, reducing security risks and operational inefficiencies. By empowering developers with policy-driven access requests and ensuring automatic revocation of permissions, Tarbac enhances productivity, security, and compliance in cloud-native environments. With comprehensive auditing and monitoring capabilities, it provides transparency and accountability, making it an essential tool for modern Kubernetes access management.
