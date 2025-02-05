@@ -10,7 +10,7 @@ In the fast-paced world of Kubernetes, static Role-Based Access Control (RBAC) s
 
 Traditional RBAC systems are static, meaning roles are created once and persist indefinitely unless manually revoked. This approach is ill-suited for dynamic Kubernetes environments where access needs can change rapidly. Static permissions can lead to over-privileged users and potential security vulnerabilities.
 
-**Tarbac Solution**: Time-bound roles. Tarbac introduces roles that automatically expire after a specified duration. This ensures that access is granted just in time, for just the right amount of time, and disappears automatically, eliminating the risk of lingering permissions.
+**Tarbac Solution**: Time-bound roles bindings. Tarbac introduces roles that automatically expire after a specified duration. This ensures that access is granted just in time, for just the right amount of time, and disappears automatically, eliminating the risk of lingering permissions.
 
 ### ⏳ The IT Bottleneck
 
