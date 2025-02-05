@@ -1,4 +1,4 @@
-# 🚀 TARBAC: Break-The-Glass With Self-Service Dynamic Access
+# 🚀 TARBAC: IT Breaks-the-Glass for Self-Service Dynamic Access
 
 In the fast-paced world of Kubernetes, static Role-Based Access Control (RBAC) systems often fall short. Traditional RBAC models are rigid, requiring manual intervention for role assignments and cleanups, which can lead to security risks and operational inefficiencies. Enter Tarbac, a cloud native solution designed to address these challenges by introducing time-based and self-service, policy-driven access controls.
 
@@ -243,14 +243,20 @@ Tarbac provides comprehensive monitoring and auditing capabilities to ensure tra
 All relevant `Events` are transparently rendered to the cluster, tagged with the corresponding `RequestID`. This ensures a clear audit trail of access requests, approvals, and revocations, providing administrators with detailed insights into who performed what actions, when, and under which policies.
 
 ```bash
+kubectl get events -n default
+
 LAST SEEN   TYPE     REASON      OBJECT                                             MESSAGE
-118s        Normal   Submitted   clustersudorequest/break-the-glass   User 'tech-lead' submitted a ClusterSudoRequest for policy 'team-a-namespaces-admin' for a duration of 1h0m0s [RequestID: ae38f12d-a666-4d60-bb2a-222b10e90b91]
-118s        Normal   Approved    clustersudorequest/break-the-glass   User 'tech-lead' was approved by 'team-a-namespaces-admin' ClusterSudoPolicy [RequestID: ae38f12d-a666-4d60-bb2a-222b10e90b91]
+2h12m       Normal   Submitted   clustersudorequest/break-the-glass   User 'tech-lead' submitted a ClusterSudoRequest for policy 'team-a-namespaces-admin' for a duration of 1h0m0s [RequestID: ae38f12d-a666-4d60-bb2a-222b10e90b91]
+2h12m       Normal   Approved    clustersudorequest/break-the-glass   User 'tech-lead' was approved by 'team-a-namespaces-admin' ClusterSudoPolicy [RequestID: ae38f12d-a666-4d60-bb2a-222b10e90b91]
+1h12m       Warning  Expired     clustersudorequest/break-the-glass   ClusterSudoRequest of user 'tech-lead' for policy 'team-a-namespaces-admin' expired [RequestID: ae38f12d-a666-4d60-bb2a-222b10e90b91]
 ```
 
 ```bash
+kubectl get events -n service-a
+
 LAST SEEN   TYPE     REASON               OBJECT                                                           MESSAGE
-2m4s        Normal   PermissionsGranted   temporaryrbac/user-tech-lead-team-a-namespaces-222b10e90b91   Temporary permissions were granted for user-tech-lead-team-a-namespaces-222b10e90b91 in namespace service-a [RequestID: ae38f12d-a666-4d60-bb2a-222b10e90b91]
+2h12m       Normal   PermissionsGranted   temporaryrbac/user-tech-lead-team-a-namespaces-222b10e90b91   Temporary permissions were granted for user-tech-lead-team-a-namespaces-222b10e90b91 in namespace service-a [RequestID: ae38f12d-a666-4d60-bb2a-222b10e90b91]
+1h12m       Normal   PermissionsRevoked   temporaryrbac/user-tech-lead-team-a-namespaces-222b10e90b91   Temporary permissions were revoked in namespace service-a [RequestID: ae38f12d-a666-4d60-bb2a-222b10e90b91]
 ```
 
 ##### 📝 Logs
@@ -258,7 +264,9 @@ LAST SEEN   TYPE     REASON               OBJECT                                
 All relevant logs are transparent and sent to standard output coupled with the relevant `RequestID`. This provides a clear audit trail of access requests, ensures accountability and enhances security by allowing administrators to review who requested what, when, and for how long.
 
 ```bash
-${EXAMPLE}
+2025-02-05T10:52:35Z    INFO    Checking expiration     {"controller": "temporaryrbac", "controllerGroup": "tarbac.io", "controllerKind": "TemporaryRBAC", "TemporaryRBAC": {"name":"user-test-user-self-service-labeled-222b10e90b91","namespace":"service-c"}, "namespace": "service-c", "name": "user-test-user-self-service-labeled-222b10e90b91", "reconcileID": "bc181bbf-a703-4250-be47-da82723a0d12", "requestID": "ae38f12d-a666-4d60-bb2a-222b10e90b91", "currentTime": "2025-02-05T10:52:35Z", "expiresAt": "2025-02-05 10:52:35 +0000 UTC"}
+2025-02-05T10:52:35Z    INFO    TemporaryRBAC expired, cleaning up associated bindings  {"controller": "temporaryrbac", "controllerGroup": "tarbac.io", "controllerKind": "TemporaryRBAC", "TemporaryRBAC": {"name":"user-test-user-self-service-labeled-222b10e90b91","namespace":"service-c"}, "namespace": "service-c", "name": "user-test-user-self-service-labeled-222b10e90b91", "reconcileID": "bc181bbf-a703-4250-be47-da82723a0d12", "requestID": "ae38f12d-a666-4d60-bb2a-222b10e90b91", "currentTime": "2025-02-05T10:52:35Z", "expiresAt": "2025-02-05 10:52:35 +0000 UTC"}
+2025-02-05T10:52:35Z    INFO    TemporaryRBAC status updated    {"controller": "temporaryrbac", "controllerGroup": "tarbac.io", "controllerKind": "TemporaryRBAC", "TemporaryRBAC": {"name":"user-test-user-self-service-labeled-222b10e90b91","namespace":"service-c"}, "namespace": "service-c", "name": "user-test-user-self-service-labeled-222b10e90b91", "reconcileID": "bc181bbf-a703-4250-be47-da82723a0d12", "requestID": "ae38f12d-a666-4d60-bb2a-222b10e90b91", "kind": "TemporaryRBAC", "name": "user-test-user-self-service-labeled-222b10e90b91", "namespace": "service-c", "state": "Expired"}
 ```
 
 This detailed view provides administrators with a clear understanding of the resources provisioned under the request, ensuring transparency and accountability in access management. By maintaining a comprehensive audit trail and offering real-time monitoring, Tarbac enables administrators to effectively manage and review access activities, thereby enhancing overall security.
