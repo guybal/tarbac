@@ -13,7 +13,7 @@
   - [Design Overview](#design-overview)
   - [Getting Started with TARBAC](#getting-started-with-tarbac)
 
-**Time, Atribute & Role-Based Access Controller (TARBAC)** provides a Kubernetes-native solution to manage temporary RBAC permissions dynamically. It ensures secure, time-limited access by leveraging a self-service, policy-driven approach. Developers request what they need, policies validate the request, and temporary access is granted (and revoked) automatically.
+**Temporal Adaptive Role Based Access Controller (TARBAC)** provides a Kubernetes-native solution to manage temporary RBAC permissions dynamically. It ensures secure, time-limited access by leveraging a self-service, policy-driven approach. Developers request what they need, policies validate the request, and temporary access is granted (and revoked) automatically.
 
 ---
 
@@ -26,7 +26,7 @@
 To quickly install TARBAC, run the following script:
 
 ```bash
-curl -sL https://raw.githubusercontent.com/guybal/tarbac/main/install.sh | bash
+curl -sL https://raw.githubusercontent.com/guybal/tarbac/refs/heads/main/config/install.sh | bash
 ```
 
 #### Helm
