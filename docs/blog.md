@@ -2,7 +2,7 @@
 
 In the fast-paced world of Kubernetes, static Role-Based Access Control (RBAC) systems often fall short. Traditional RBAC models are rigid, requiring manual intervention for role assignments and cleanups, which can lead to security risks and operational inefficiencies. Enter Tarbac, a cloud native solution designed to address these challenges by introducing time-based and self-service, policy-driven access controls.
 
-**Temporal Adaptive Role Based Access Controller (TARBAC)** provides a Kubernetes-native solution to manage temporary RBAC permissions dynamically. It ensures secure, time-limited access by leveraging a self-service, policy-driven approach. Developers request what they need, policies validate the request, and temporary access is granted (and revoked) automatically.
+**Temporal Auditable Role Based Access Controller (TARBAC)** provides a Kubernetes-native solution to manage temporary RBAC permissions dynamically. It ensures secure, time-limited access by leveraging a self-service, policy-driven approach. Developers request what they need, policies validate the request, and temporary access is granted (and revoked) automatically.
 
 ## 🔍 The Problems
 
