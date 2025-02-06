@@ -9,6 +9,8 @@ spec:
     listKind: ClusterSudoPolicyList
     plural: clustersudopolicies
     singular: clustersudopolicy
+    shortNames:
+      - csup
   scope: Cluster
   versions:
     - name: v1

@@ -9,6 +9,8 @@ spec:
     listKind: SudoPolicyList
     plural: sudopolicies
     singular: sudopolicy
+    shortNames:
+      - sup
   scope: Namespaced
   versions:
     - name: v1

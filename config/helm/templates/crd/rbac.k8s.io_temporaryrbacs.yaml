@@ -9,6 +9,8 @@ spec:
     listKind: TemporaryRBACList
     plural: temporaryrbacs
     singular: temporaryrbac
+    shortNames:
+      - trb
   scope: Namespaced
   versions:
     - name: v1

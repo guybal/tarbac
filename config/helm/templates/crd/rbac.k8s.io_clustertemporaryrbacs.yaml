@@ -9,6 +9,8 @@ spec:
     listKind: ClusterTemporaryRBACList
     plural: clustertemporaryrbacs
     singular: clustertemporaryrbac
+    shortNames:
+      - ctrb
   scope: Cluster
   versions:
     - name: v1
