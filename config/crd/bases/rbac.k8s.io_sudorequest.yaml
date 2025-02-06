@@ -28,6 +28,7 @@ spec:
                 policy:
                   type: string
                   description: The name of the SudoPolicy to enforce for this request.
+                  x-kubernetes-mutability: Immutable
               required:
                 - duration
                 - policy
@@ -40,6 +41,7 @@ spec:
                 requestID:
                   type: string
                   description: Request's UUID.
+                  x-kubernetes-mutability: Immutable
                 childResource:
                   type: array
                   description: The list of associated child resources.
@@ -62,10 +64,12 @@ spec:
                   type: string
                   format: date-time
                   description: When the SudoRequest was created.
+                  x-kubernetes-mutability: Immutable
                 expiresAt:
                   type: string
                   format: date-time
                   description: When the SudoRequest will expire.
+                  x-kubernetes-mutability: Immutable
                 errorMessage:
                   type: string
                   description: Useful error message.

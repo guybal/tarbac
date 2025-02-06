@@ -33,6 +33,7 @@ spec:
                   description: The duration for which the RBAC binding is valid.
                 roleRef:
                   type: object
+                  x-kubernetes-mutability: Immutable
                   properties:
                     apiGroup:
                       type: string
@@ -78,6 +79,7 @@ spec:
                 requestID:
                   type: string
                   description: Request's UUID.
+                  x-kubernetes-mutability: Immutable
                 childResource:
                   type: array
                   description: The list of associated child resources.
@@ -101,10 +103,12 @@ spec:
                   type: string
                   format: date-time
                   description: The timestamp when the TemporaryRBAC was created.
+                  x-kubernetes-mutability: Immutable
                 expiresAt:
                   type: string
                   format: date-time
                   description: The timestamp when the TemporaryRBAC will expire.
+                  x-kubernetes-mutability: Immutable
                 errorMessage:
                   type: string
                   description: Useful error message.
