@@ -7,6 +7,7 @@
       - [Helm](#helm)
     - [Detailed Installation](#detailed-installation)
       - [Prerequisites](#prerequisites)
+      - [Development](#development)
       - [Installation](#installation)
         - [View Available Values](#view-available-values)
         - [Create `tarbac-values.yaml` file](#create-tarbac-valuesyaml-file)
@@ -44,13 +45,19 @@ helm install tarbac oci://ghcr.io/guybal/helm-charts/tarbac --version 1.1.7 --na
 To install TARBAC, ensure you have the following prerequisites:
 
 - A running [**Kubernetes cluster**](https://kubernetes.io/docs/setup/): Version `v1.29.10` or later.
+
 - [**cert-manager**](https://cert-manager.io/docs/installation/helm/): Version `v1.16.2` or later installed on the Kubernetes cluster.
   
     **⚠️ Warning**
     > Disabling `cert-manager` integration for certificate management is supported and will result in a self-signed certificate for the Webhook. However, it is **highly recommended** to use `cert-manager` to ensure secure and automated certificate handling.
 
 - [**kubectl**](https://kubernetes.io/docs/tasks/tools/#kubectl): Client and Server Version `v1.29.10` or later.
+
+#### Development
+
 - [**Go**](https://go.dev/doc/install): Version `1.23.0` or later.
+
+- [**Tilt**](https://docs.tilt.dev/install.html): Version `v0.32.1` or later.
 
 #### Installation
 
