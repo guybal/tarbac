@@ -1,14 +1,17 @@
 # Paths and binaries
 CONTROLLER_GEN = $(shell which controller-gen)
+GOIMPORTS = $(shell which goimports)
+GOLANGCI_LINT = $(shell which golangci-lint)
 
 # Default target
-all: generate
+all: generate tidy build run
 
 # Generate code
 generate:
 	$(CONTROLLER_GEN) crd paths=./api/v1 output:crd:artifacts:config=./config/crd/bases
+	$(GOIMPORTS) -w .
 
-# Tidy Go modules (optional)
+# Tidy Go modules
 tidy:
 	go mod tidy
 
@@ -17,9 +20,13 @@ build:
 	go build -o bin/manager main.go
 
 # Run the manager locally
-run: generate
+run: 
 	go run ./main.go
 
+# Lint the code
+lint:
+	$(GOLANGCI_LINT) run
+
 # Test (optional, for testing controllers)
-test: generate
-	go test ./... -coverprofile cover.out
+# test: generate
+# 	go test ./... -coverprofile cover.out
