@@ -1,5 +1,5 @@
-{{- if .Values.webhook.certManager.enabled }}
-{{- if include "use_selfsigned_issuer" . }}
+{{- if eq (include "cert_manager_enabled" .) "true" }}
+  {{- if eq (include "use_selfsigned_issuer" .) "true" }}
 apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
@@ -7,7 +7,7 @@ metadata:
   namespace: {{ .Values.namespace.name }}
 spec:
   selfSigned: {}
-{{- end }}
+  {{- end }}
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate

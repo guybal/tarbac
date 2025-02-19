@@ -19,7 +19,7 @@ Checks if cert-manager is enabled.
 Returns true if webhook.certManager.enabled is true.
 */}}
 {{- define "cert_manager_enabled" -}}
-{{- .Values.webhook.certManager.enabled | default false -}}
+{{- eq (.Values.webhook.certManager.enabled | default false) true -}}
 {{- end -}}
 
 {{/*
@@ -27,7 +27,7 @@ Checks if cert-manager is disabled.
 Returns true if webhook.certManager.enabled is false.
 */}}
 {{- define "cert_manager_disabled" -}}
-{{- not (.Values.webhook.certManager.enabled | default false) -}}
+{{- eq (.Values.webhook.certManager.enabled | default false) false -}}
 {{- end -}}
 
 {{/*
@@ -46,3 +46,16 @@ Returns true if webhook.ca.caBundle isn't empty.
 {{- ne .Values.webhook.ca.caBundle "" -}}
 {{- end -}}
 
+{{/*
+Checks if cert-manager is disabled and CA bundle is unspecified.
+Returns true if both conditions are met.
+*/}}
+{{- define "cert_manager_disabled_and_ca_bundle_unspecified" -}}
+{{- $certManagerDisabled := include "cert_manager_disabled" . }}
+{{- $caBundleUnspecified := include "ca_bundle_unspecified" . }}
+{{- if and (eq $certManagerDisabled "true") (eq $caBundleUnspecified "true") -}}
+true
+{{- else -}}
+false
+{{- end -}}
+{{- end -}}

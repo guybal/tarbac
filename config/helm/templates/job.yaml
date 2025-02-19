@@ -1,5 +1,4 @@
-{{- if include "cert_manager_disabled" . }}
-  {{- if include "ca_bundle_unspecified" . }}
+{{- if eq (include "cert_manager_disabled_and_ca_bundle_unspecified" .) "true" }}
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -69,5 +68,4 @@ spec:
       volumes:
         - name: certs
           emptyDir: {}
-{{- end }}
 {{- end }}
