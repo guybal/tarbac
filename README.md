@@ -1,6 +1,6 @@
-# Time and Role Based Access Controller
+# Temporal Auditable Role Based Access Controller
 
-- [Time and Role Based Access Controller](#time-and-role-based-access-controller)
+- [Temporal Auditable Role Based Access Controller](#temporal-auditable-role-based-access-controller)
   - [Install](#install)
     - [TL;DR](#tldr)
       - [Installation Script](#installation-script)
